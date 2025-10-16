@@ -1,4 +1,5 @@
-# eBook Flipbook - GitHub Pages
+# Criar arquivo README com instruções
+readme_content = """# eBook Flipbook - GitHub Pages
 
 Este projeto cria um site estático para hospedar eBooks com efeito de virar páginas usando **StPageFlip + PDF.js**.
 
@@ -124,3 +125,38 @@ Este código é fornecido "como está" para uso pessoal e educacional.
 ---
 
 **Desenvolvido com ❤️ para facilitar a leitura de eBooks!**
+"""
+
+# Salvar README
+with open(os.path.join(project_dir, 'README.md'), 'w', encoding='utf-8') as f:
+    f.write(readme_content)
+
+print("✅ README.md criado!")
+
+# Criar arquivo ZIP
+zip_filename = 'flipbook.zip'
+
+with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    # Adicionar todos os arquivos do projeto
+    for root, dirs, files in os.walk(project_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+            # Nome do arquivo no ZIP (sem o diretório do projeto)
+            arc_name = os.path.relpath(file_path, project_dir)
+            zipf.write(file_path, arc_name)
+
+print(f"🎁 Arquivo ZIP criado: {zip_filename}")
+print(f"📦 Tamanho do arquivo: {os.path.getsize(zip_filename)} bytes")
+
+# Mostrar conteúdo do ZIP
+print("\n📋 Conteúdo do ZIP:")
+with zipfile.ZipFile(zip_filename, 'r') as zipf:
+    for file_info in zipf.filelist:
+        print(f"   - {file_info.filename} ({file_info.file_size} bytes)")
+
+print(f"\n✨ Projeto completo salvo em: {zip_filename}")
+print("\n🚀 Próximos passos:")
+print("1. Extraia os arquivos do ZIP")
+print("2. Adicione seu arquivo PDF e renomeie para 'ebook.pdf'")
+print("3. Faça upload para GitHub e ative GitHub Pages")
+print("4. Acesse seu eBook flipbook online!")
