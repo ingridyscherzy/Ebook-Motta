@@ -5,7 +5,7 @@
     box-sizing: border-box;
 }
 
-/* Variáveis CSS para medidas reais do viewport */
+/* Variáveis CSS */
 :root {
     --topbar-h: 56px;
     --toolbar-h: 96px;
@@ -13,9 +13,9 @@
 
 html, body {
     height: 100%;
-    overflow: hidden;
     margin: 0;
     padding: 0;
+    overflow: hidden; /* evita scroll que "empurra" o conteúdo */
 }
 
 body {
@@ -23,30 +23,30 @@ body {
     background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
     color: #e0e0e0;
     line-height: 1.6;
-    overflow-x: hidden;
-    /* Safe area para iOS */
-    padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* App Container - Layout vertical header/stage/toolbar */
-.app-container {
-    height: min(100dvh, 100svh);
-    display: flex;
-    flex-direction: column;
-    position: relative;
+/* CSS Grid Layout - 3 linhas (header | stage | footer) */
+.app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;  /* header | stage | footer */
+    height: 100dvh; /* usa viewport real em mobile */
+    width: 100vw;
+    background: #111;
+    color: #eee;
+    /* iOS safe area */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* Header/Topbar fixo */
+/* Header/Topbar */
 #topbar {
-    height: var(--topbar-h);
-    padding: 0.75rem 1.5rem;
-    background: rgba(20, 20, 20, 0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid #333;
-    text-align: center;
-    z-index: 100;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    flex-shrink: 0;
+    min-height: var(--topbar-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border-bottom: 1px solid #2a2a2a;
+    background: #181818;
+    z-index: 1;
 }
 
 #topbar h1 {
@@ -57,29 +57,24 @@ body {
     line-height: 1.2;
 }
 
-/* Stage - Área dedicada exclusivamente ao livro (2 fases) */
-.stage {
-    height: calc(min(100dvh, 100svh) - var(--topbar-h) - var(--toolbar-h));
-    width: 100vw;
+/* Área central dedicada ao livro (não rola e não é coberta) */
+#stage {
     display: grid;
-    place-items: center;
-    overflow: hidden;
-    padding: 8px;
-    box-sizing: border-box;
+    place-items: center;  /* centraliza o livro no espaço disponível */
+    overflow: hidden;     /* nada pode extrapolar */
+    padding: 8px;         /* margem de folga */
     position: relative;
-    flex: 1;
 }
 
-/* Flipbook - Container flexível para 2 fases */
+/* O PageFlip controla width/height; só centralizamos e escalamos */
 #flipbook {
     transform-origin: center center;
-    margin: auto;
+    margin: 0 auto;
     transition: transform 0.3s ease;
 }
 
 /* FASE 1: Cover Stage - apenas a capa centralizada */
 #flipbook.cover-stage {
-    /* Tamanho natural do canvas da capa, sem width/height fixos */
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     border-radius: 8px;
 }
@@ -89,11 +84,12 @@ body {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* FASE 2: Book Stage - modo livro com PageFlip */
 #flipbook.book-stage {
-    /* PageFlip define completamente o layout */
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     border-radius: 8px;
     overflow: hidden;
@@ -101,12 +97,72 @@ body {
 
 /* FASE 2: Páginas do livro - PageFlip controla tudo */
 #flipbook.book-stage .page {
-    /* Remover qualquer override de layout - PageFlip controla */
     display: unset !important;
     align-items: unset !important;
     justify-content: unset !important;
 }
 
+/* Footer/Toolbar */
+#toolbar {
+    min-height: var(--toolbar-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px) 12px;
+    border-top: 1px solid #2a2a2a;
+    background: #181818;
+    z-index: 1;
+    flex-wrap: wrap;
+}
+
+.controls-left,
+.controls-center,
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.control-btn {
+    background: rgba(74, 158, 255, 0.1);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    color: #4a9eff;
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.control-btn:hover {
+    background: rgba(74, 158, 255, 0.2);
+    border-color: #4a9eff;
+    transform: translateY(-1px);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+}
+
+.control-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.page-info,
+.zoom-info {
+    color: #ccc;
+    font-size: 0.9rem;
+    min-width: 80px;
+    text-align: center;
+    font-weight: 500;
+}
 
 /* Call-to-Action para transição Cover → Book */
 .cover-cta {
@@ -163,72 +219,6 @@ body {
         transform: translateX(8px) scale(1.1);
         opacity: 1;
     }
-}
-
-/* Toolbar - Controles abaixo da stage */
-.toolbar {
-    min-height: var(--toolbar-h);
-    padding: 0.75rem 1.5rem;
-    background: rgba(20, 20, 20, 0.95);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid #333;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-    flex-shrink: 0;
-    /* Safe area adicional no iOS */
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-}
-
-.controls-left,
-.controls-center,
-.controls-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.control-btn {
-    background: rgba(74, 158, 255, 0.1);
-    border: 1px solid rgba(74, 158, 255, 0.3);
-    color: #4a9eff;
-    padding: 0.6rem 0.8rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-}
-
-.control-btn:hover {
-    background: rgba(74, 158, 255, 0.2);
-    border-color: #4a9eff;
-    transform: translateY(-1px);
-}
-
-.control-btn:active {
-    transform: translateY(0);
-}
-
-.control-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.page-info,
-.zoom-info {
-    color: #ccc;
-    font-size: 0.9rem;
-    min-width: 80px;
-    text-align: center;
-    font-weight: 500;
 }
 
 /* Loading Screen */
@@ -388,11 +378,38 @@ body {
     display: none !important;
 }
 
+/* Page Styles - Mínimo necessário, PageFlip controla o layout */
+.page {
+    background: white;
+}
+
+.page img,
+.page canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Fullscreen Mode */
+.app.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 9999;
+    grid-template-rows: 0 1fr auto;
+}
+
+.app.fullscreen #topbar {
+    display: none;
+}
+
 /* Responsive Design - Mobile First */
 @media (max-width: 768px) {
     :root {
         --topbar-h: 52px;
-        --toolbar-h: 120px; /* Mais espaço para layout vertical */
+        --toolbar-h: 120px;
     }
 
     #topbar {
@@ -403,7 +420,7 @@ body {
         font-size: 1.1rem;
     }
 
-    .toolbar {
+    #toolbar {
         flex-direction: column;
         gap: 0.5rem;
         padding: 0.5rem 1rem;
@@ -448,44 +465,13 @@ body {
         --toolbar-h: 140px;
     }
 
-    .toolbar {
+    #toolbar {
         padding: 0.4rem 0.8rem;
     }
 
-    .stage {
+    #stage {
         padding: 4px;
     }
-}
-
-/* Fullscreen Mode */
-.app-container.fullscreen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: min(100dvh, 100svh);
-    z-index: 9999;
-}
-
-.app-container.fullscreen #topbar {
-    display: none;
-}
-
-.app-container.fullscreen .stage {
-    height: calc(min(100dvh, 100svh) - var(--toolbar-h));
-}
-
-/* Page Styles - Mínimo necessário, PageFlip controla o layout */
-.page {
-    background: white;
-    /* PageFlip controla display, position, etc. Não forçar layout! */
-}
-
-.page img,
-.page canvas {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
 }
 
 /* Animation for smooth transitions */
@@ -494,6 +480,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-.stage {
+#stage {
     animation: fadeIn 0.5s ease-out;
 }

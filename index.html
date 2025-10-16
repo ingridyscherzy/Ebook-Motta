@@ -13,9 +13,9 @@
     <script src="https://unpkg.com/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
 </head>
 <body>
-    <div class="app-container">
+    <div class="app">
         <!-- Header/Topbar -->
-        <header id="topbar" class="header">
+        <header id="topbar">
             <h1>📖 eBook Viewer</h1>
         </header>
 
@@ -48,7 +48,7 @@
         </div>
 
         <!-- Main Stage - Área dedicada ao livro -->
-        <main class="stage">
+        <main id="stage">
             <div id="flipbook"></div>
             <!-- Call-to-action para iniciar o livro (Fase 1 → Fase 2) -->
             <div id="coverCallToAction" class="cover-cta hidden" aria-label="Toque para começar a leitura">
@@ -62,7 +62,7 @@
         </main>
 
         <!-- Toolbar - Controles separados da área do livro -->
-        <div class="toolbar" id="controls">
+        <footer id="toolbar">
             <div class="controls-left">
                 <button id="prevBtn" class="control-btn" title="Página Anterior">
                     <span>◀</span>
@@ -91,7 +91,7 @@
                     <span>⛶</span>
                 </button>
             </div>
-        </div>
+        </footer>
     </div>
 
     <script src="main.js"></script>

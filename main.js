@@ -34,7 +34,7 @@ class TwoPhaseEBookViewer {
 
         try {
             // Configurar elementos DOM
-            this.stage = document.querySelector('.stage');
+            this.stage = document.getElementById('stage');
             this.flipbook = document.getElementById('flipbook');
             this.coverCTA = document.getElementById('coverCallToAction');
 
@@ -175,6 +175,9 @@ class TwoPhaseEBookViewer {
             // Mostrar call-to-action
             this.showCoverCTA();
 
+            // Diagnóstico de layout
+            setTimeout(() => this.diagnoseLayout(), 100);
+
             this.hideLoading();
 
             console.log(`✅ FASE 1 COMPLETA: Capa (${this.pageWidth}x${this.pageHeight}) exibida`);
@@ -303,6 +306,9 @@ class TwoPhaseEBookViewer {
 
             // Fit inicial
             this.fitToViewport();
+
+            // Diagnóstico de layout
+            setTimeout(() => this.diagnoseLayout(), 100);
 
             this.hideLoading();
 
@@ -447,55 +453,48 @@ class TwoPhaseEBookViewer {
         return pageDiv;
     }
 
-    // ===== FIT TO VIEWPORT =====
+    // ===== FIT TO VIEWPORT - CSS GRID RESPECTING =====
     fitToViewport() {
         if (!this.stage || !this.flipbook) return;
 
-        // Obter dimensões REAIS da stage
-        const stageRect = this.stage.getBoundingClientRect();
-        const availW = stageRect.width - 16;  // 8px padding de cada lado
-        const availH = stageRect.height - 16; // 8px padding de cada lado
+        // Medida dinâmica dos retângulos fornecidos pelo CSS Grid
+        const topbar = document.getElementById('topbar');
+        const stage = document.getElementById('stage');
+        const toolbar = document.getElementById('toolbar');
 
-        let visibleBookWidth, visibleBookHeight;
+        // Dimensões reais da área útil (stage) fornecidas pelo Grid
+        const rect = stage.getBoundingClientRect();
+        const availW = rect.width - 16;  // padding de 8px de cada lado
+        const availH = rect.height - 16; // padding de 8px de cada lado
 
-        if (this.currentPhase === 'cover-stage') {
-            // FASE 1: Apenas a capa
-            visibleBookWidth = this.pageWidth;
-            visibleBookHeight = this.pageHeight;
-        } else if (this.currentPhase === 'book-stage') {
-            // FASE 2: SINGLE PAGE MODE - uma página por vez
-            visibleBookWidth = this.pageWidth;  // UMA página, não dupla
-            visibleBookHeight = this.pageHeight;
-        } else {
-            return; // Loading ou outro estado
-        }
+        // Descubra se está exibindo capa única ou página única
+        const singleCover = this.currentPhase === 'cover-stage';
+        const visibleBookWidth = this.pageWidth;   // SEMPRE single page agora
+        const visibleBookHeight = this.pageHeight;
 
-        // Calcular scale ideal
         const scaleW = availW / visibleBookWidth;
         const scaleH = availH / visibleBookHeight;
-        const idealScale = Math.min(scaleW, scaleH);
+        const scale = Math.min(scaleW, scaleH) * 0.92; // 8% de folga para não cortar
 
-        // Aplicar folga de ~8%
-        const baseScale = idealScale * 0.92;
-
-        // Clamp
-        this.currentZoom = this.clamp(baseScale, this.minZoom, this.maxZoom);
+        this.currentZoom = this.clamp(scale, this.minZoom, this.maxZoom);
 
         // Aplicar transform
-        this.flipbook.style.transform = `scale(${this.currentZoom})`;
-        this.flipbook.style.transformOrigin = 'center center';
+        const flip = document.getElementById('flipbook');
+        flip.style.transform = `scale(${this.currentZoom})`;
+        flip.style.transformOrigin = 'center center';
 
         // Atualizar interface
         this.updateZoomInfo();
 
         // LOGS DE DIAGNÓSTICO
-        const modeType = this.currentPhase === 'cover-stage' ? 'CAPA_ÚNICA' : 'SINGLE_PAGE';
-        console.log(`📐 FIT TO VIEWPORT - FASE ${this.currentPhase.toUpperCase()} (${modeType})`);
-        console.log(`   stageRect: ${stageRect.width.toFixed(1)}x${stageRect.height.toFixed(1)}`);
-        console.log(`   availableSpace: ${availW.toFixed(1)}x${availH.toFixed(1)}`);
-        console.log(`   visibleBookSize: ${visibleBookWidth}x${visibleBookHeight}`);
-        console.log(`   scaleW: ${scaleW.toFixed(3)}, scaleH: ${scaleH.toFixed(3)}`);
-        console.log(`   appliedScale: ${this.currentZoom.toFixed(3)}`);
+        const modeType = singleCover ? 'CAPA_ÚNICA' : 'PÁGINA_ÚNICA';
+        console.log(`📐 PURE CSS GRID FIT - FASE ${this.currentPhase.toUpperCase()} (${modeType})`);
+        console.log(`   Topbar: ${topbar.getBoundingClientRect().height.toFixed(1)}px`);
+        console.log(`   Stage: ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}px`);
+        console.log(`   Toolbar: ${toolbar.getBoundingClientRect().height.toFixed(1)}px`);
+        console.log(`   Available: ${availW.toFixed(1)}x${availH.toFixed(1)}px`);
+        console.log(`   BookSize: ${visibleBookWidth}x${visibleBookHeight}px`);
+        console.log(`   ScaleCalc: min(${scaleW.toFixed(3)}, ${scaleH.toFixed(3)}) * 0.92 = ${this.currentZoom.toFixed(3)}`);
     }
 
     clamp(value, min, max) {
@@ -704,7 +703,7 @@ class TwoPhaseEBookViewer {
     }
 
     toggleFullscreen() {
-        const container = document.querySelector('.app-container');
+        const container = document.querySelector('.app');
 
         if (!document.fullscreenElement) {
             container.requestFullscreen().then(() => {
@@ -727,19 +726,19 @@ class TwoPhaseEBookViewer {
     showLoading() {
         document.getElementById('loading').classList.remove('hidden');
         document.getElementById('error').classList.add('hidden');
-        document.getElementById('controls').style.display = 'none';
+        document.getElementById('toolbar').style.display = 'none';
         this.updateProgress(0);
     }
 
     hideLoading() {
         document.getElementById('loading').classList.add('hidden');
-        document.getElementById('controls').style.display = 'flex';
+        document.getElementById('toolbar').style.display = 'flex';
     }
 
     showError(message) {
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('error').classList.remove('hidden');
-        document.getElementById('controls').style.display = 'none';
+        document.getElementById('toolbar').style.display = 'none';
         document.getElementById('errorMessage').textContent = message;
     }
 
@@ -783,6 +782,32 @@ class TwoPhaseEBookViewer {
             const isVisible = rect.width > 0 && rect.height > 0;
             console.log(`   Página ${index}: ${isVisible ? 'VISÍVEL' : 'OCULTA'} (${rect.width}x${rect.height})`);
         });
+    }
+
+    // ===== DIAGNÓSTICO DE LAYOUT CSS GRID =====
+    diagnoseLayout() {
+        const app = document.querySelector('.app');
+        const topbar = document.getElementById('topbar');
+        const stage = document.getElementById('stage');
+        const toolbar = document.getElementById('toolbar');
+        const flipbook = this.flipbook;
+
+        console.log(`🏗️ DIAGNÓSTICO PURE CSS GRID LAYOUT:`);
+        console.log(`   App Container: ${app.getBoundingClientRect().height.toFixed(1)}px`);
+        console.log(`   Topbar: ${topbar.getBoundingClientRect().height.toFixed(1)}px`);
+        console.log(`   Stage: ${stage.getBoundingClientRect().height.toFixed(1)}px`);
+        console.log(`   Toolbar: ${toolbar.getBoundingClientRect().height.toFixed(1)}px`);
+        console.log(`   Flipbook: ${flipbook.getBoundingClientRect().height.toFixed(1)}px`);
+
+        const stageTop = stage.getBoundingClientRect().top;
+        const toolbarTop = toolbar.getBoundingClientRect().top;
+        const stageBottom = stageTop + stage.getBoundingClientRect().height;
+        const gap = toolbarTop - stageBottom;
+
+        console.log(`   Gap entre Stage e Toolbar: ${gap.toFixed(1)}px`);
+        console.log(`   Stage top: ${stageTop.toFixed(1)}px, bottom: ${stageBottom.toFixed(1)}px`);
+        console.log(`   Toolbar top: ${toolbarTop.toFixed(1)}px`);
+        console.log(`   Total height check: ${(topbar.getBoundingClientRect().height + stage.getBoundingClientRect().height + toolbar.getBoundingClientRect().height).toFixed(1)}px`);
     }
 
     // ===== CLEANUP =====
