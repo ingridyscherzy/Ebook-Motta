@@ -294,10 +294,10 @@ class TwoPhaseEBookViewer {
             // Configurar controles
             this.setupBookStageControls();
 
-            // Posicionar na página 2 (primeira página após a capa)
+            // Posicionar na primeira página (página 1)
             // Em single-page mode, cada página é exibida individualmente
             setTimeout(() => {
-                this.pageFlip.turnToPage(1); // Página 2 (índice 1) - uma por vez
+                this.pageFlip.turnToPage(0); // Página 1 (índice 0) - primeira página
                 setTimeout(() => this.diagnosePageVisibility(), 200);
             }, 100);
 
