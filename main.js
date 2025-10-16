@@ -229,7 +229,7 @@ class EBookViewer {
         const flipbookContainer = document.getElementById('flipbook');
         flipbookContainer.innerHTML = '';
 
-        // Configurar PageFlip - capa única, resto duplas
+        // Configurar PageFlip - primeira página centralizada, resto duplas
         this.pageFlip = new St.PageFlip(flipbookContainer, {
             width: this.pageWidth,
             height: this.pageHeight,
@@ -238,10 +238,10 @@ class EBookViewer {
             maxWidth: 2000,
             minHeight: 300,
             maxHeight: 2000,
-            showCover: true,  // CAPA ISOLADA (só índice 0)
+            showCover: true,  // PRIMEIRA PÁGINA COMO CAPA CENTRALIZADA
             mobileScrollSupport: true,
             clickEventForward: true,
-            usePortrait: false,  // FALSE: spread mode por padrão
+            usePortrait: false,  // Spread mode para o resto
             startPage: 0,
             drawShadow: true,
             flippingTime: 600,
@@ -258,6 +258,10 @@ class EBookViewer {
 
         // Carregar páginas no flipbook
         this.pageFlip.loadFromHTML(pageElements);
+
+        // LOG: Verificar se as páginas foram carregadas
+        console.log(`📚 Páginas carregadas no flipbook: ${pageElements.length}`);
+        console.log(`📄 Primeira página HTML:`, pageElements[0] ? 'OK' : 'ERRO - AUSENTE');
 
         // Event listeners do flipbook
         this.pageFlip.on('flip', () => {
@@ -344,15 +348,40 @@ class EBookViewer {
         flipbook.style.transform = `scale(${this.currentZoom})`;
         flipbook.style.transformOrigin = 'center center';
 
-        // Forçar centramento CSS na capa
+        // Forçar centramento CSS na capa e garantir visibilidade
         if (isCover) {
             flipbook.style.display = 'flex';
             flipbook.style.justifyContent = 'center';
             flipbook.style.alignItems = 'center';
+
+            // Forçar visibilidade da primeira página
+            const firstPage = flipbook.querySelector('.page:first-child');
+            if (firstPage) {
+                firstPage.style.display = 'flex';
+                firstPage.style.justifyContent = 'center';
+                firstPage.style.alignItems = 'center';
+                firstPage.style.width = '100%';
+                firstPage.style.height = '100%';
+                firstPage.style.visibility = 'visible';
+                firstPage.style.opacity = '1';
+                console.log('🎯 PRIMEIRA PÁGINA FORÇADA A APARECER');
+            } else {
+                console.error('❌ PRIMEIRA PÁGINA NÃO ENCONTRADA NO DOM');
+            }
         } else {
             flipbook.style.display = '';
             flipbook.style.justifyContent = '';
             flipbook.style.alignItems = '';
+
+            // Restaurar estilo normal das páginas
+            const allPages = flipbook.querySelectorAll('.page');
+            allPages.forEach(page => {
+                page.style.display = '';
+                page.style.justifyContent = '';
+                page.style.alignItems = '';
+                page.style.width = '';
+                page.style.height = '';
+            });
         }
 
         // Atualizar interface

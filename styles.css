@@ -80,18 +80,29 @@ body {
     margin: auto;
 }
 
+/* Forçar exibição da primeira página (capa) */
+#flipbook .page:first-child {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
 /* Capa centralizada - quando há apenas uma página */
 #flipbook .page:only-child {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
 }
 
-/* Container do flipbook quando há apenas uma página visível */
-#flipbook:has(.page:only-child) {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* Container do flipbook forçando centramento */
+#flipbook {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
 }
 
 /* Mensagem de Instrução */
