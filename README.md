@@ -1,57 +1,62 @@
-# eBook Flipbook - GitHub Pages
+# 📖 eBook Viewer
 
-Este projeto cria um site estático para hospedar eBooks com efeito de virar páginas usando **StPageFlip + PDF.js**.
+Um visualizador de eBook moderno e responsivo com efeito de virar páginas, criado especificamente para hospedar um único arquivo PDF com uma interface elegante e dark mode.
 
-## 📁 Estrutura dos Arquivos
+## ✨ Características
+
+- 📚 **Efeito de virar páginas realista** usando StPageFlip
+- 🎨 **Design moderno** com dark mode suave
+- 📱 **Totalmente responsivo** para desktop e mobile
+- 🔍 **Controles de zoom** avançados (50% - 300%)
+- ⌨️ **Atalhos de teclado** para navegação
+- 🖥️ **Modo tela cheia** para leitura imersiva
+- 💾 **Botão de download** para salvar o PDF
+- 🌐 **Compatível com GitHub Pages** - 100% arquivos estáticos
+- 🚫 **Sem dependências de servidor** - funciona offline
+
+## 📁 Estrutura do Projeto
 
 ```
-├── index.html      # Página principal
-├── main.js         # Lógica JavaScript
-├── styles.css      # Estilos CSS
-├── .nojekyll       # Arquivo para GitHub Pages
-└── ebook.pdf       # SEU ARQUIVO PDF (adicionar)
+ebook-viewer/
+├── index.html          # Página principal
+├── styles.css          # Estilos (dark mode responsivo)
+├── main.js             # Lógica da aplicação
+├── ebook.pdf           # SEU ARQUIVO PDF AQUI
+└── README.md           # Esta documentação
 ```
 
-## 🚀 Como Usar
+## 🚀 Como usar
 
-### 1. Deploy no GitHub Pages
+### Opção 1: GitHub Pages (Recomendado)
 
-1. **Criar repositório no GitHub**
-   - Vá para github.com e crie um novo repositório
-   - Nome sugerido: `meu-ebook-flipbook`
-   - Marque como público
+1. **Fork ou clone** este repositório
+2. **Substitua** o arquivo `ebook.pdf` pelo seu próprio PDF
+3. **Ative GitHub Pages** nas configurações do repositório:
+   - Vá em `Settings` → `Pages`
+   - Selecione `Deploy from a branch`
+   - Escolha `main` branch
+   - Pasta: `/ (root)`
+4. **Acesse** sua URL do GitHub Pages: `https://seuusuario.github.io/nome-do-repo`
 
-2. **Upload dos arquivos**
-   - Extraia os arquivos deste ZIP
-   - **Adicione seu arquivo PDF** e renomeie para `ebook.pdf`
-   - Upload todos os arquivos para o repositório
-
-3. **Ativar GitHub Pages**
-   - Vá em Settings > Pages
-   - Source: Deploy from a branch
-   - Branch: main / (root)
-   - Salvar
-
-4. **Acessar o site**
-   - URL: `https://SEU-USUARIO.github.io/NOME-DO-REPO`
-   - Ex: `https://joao123.github.io/meu-ebook-flipbook`
-
-### 2. Teste Local
-
-Para testar localmente, você precisa de um servidor HTTP:
+### Opção 2: Servidor Local
 
 ```bash
-# Python 3
-python -m http.server 8000
+# Clone o repositório
+git clone [url-do-seu-repo]
+cd ebook-viewer
 
-# Node.js (se tiver npx)
-npx serve .
+# Inicie um servidor HTTP
+python3 -m http.server 8000
 
-# Live Server (VS Code extension)
-# Clique direito em index.html > "Open with Live Server"
+# Acesse no navegador
+http://localhost:8000
 ```
 
-Acesse: `http://localhost:8000`
+### Opção 3: Arquivo Local (com limitações)
+
+1. Abra `index.html` diretamente no navegador
+2. Se aparecer erro de CORS, clique em **"📁 Selecionar PDF"**
+3. Escolha seu arquivo PDF manualmente
 
 ## ✨ Funcionalidades
 
