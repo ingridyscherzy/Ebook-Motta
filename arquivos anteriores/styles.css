@@ -1,0 +1,485 @@
+/* Reset e Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Variáveis CSS */
+:root {
+    --topbar-h: 56px;
+    --toolbar-h: 96px;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* evita scroll que "empurra" o conteúdo */
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    color: #e0e0e0;
+    line-height: 1.6;
+}
+
+/* CSS Grid Layout - 3 linhas (header | stage | footer) */
+.app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;  /* header | stage | footer */
+    height: 100dvh; /* usa viewport real em mobile */
+    width: 100vw;
+    background: #111;
+    color: #eee;
+    /* iOS safe area */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Header/Topbar */
+#topbar {
+    min-height: var(--topbar-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border-bottom: 1px solid #2a2a2a;
+    background: #181818;
+    z-index: 1;
+}
+
+#topbar h1 {
+    font-size: 1.3rem;
+    font-weight: 300;
+    color: #4a9eff;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+/* Área central dedicada ao livro (não rola e não é coberta) */
+#stage {
+    display: grid;
+    place-items: center;  /* centraliza o livro no espaço disponível */
+    overflow: hidden;     /* nada pode extrapolar */
+    padding: 8px;         /* margem de folga */
+    position: relative;
+}
+
+/* O PageFlip controla width/height; só centralizamos e escalamos */
+#flipbook {
+    transform-origin: center center;
+    margin: 0 auto;
+    transition: transform 0.3s ease;
+}
+
+/* FASE 1: Cover Stage - apenas a capa centralizada */
+#flipbook.cover-stage {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+/* FASE 1: Página da capa deve estar centralizada */
+#flipbook.cover-stage .page {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* FASE 2: Book Stage - modo livro com PageFlip */
+#flipbook.book-stage {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* FASE 2: Páginas do livro - PageFlip controla tudo */
+#flipbook.book-stage .page {
+    display: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
+}
+
+/* Footer/Toolbar */
+#toolbar {
+    min-height: var(--toolbar-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 12px calc(env(safe-area-inset-bottom, 0px) + 8px) 12px;
+    border-top: 1px solid #2a2a2a;
+    background: #181818;
+    z-index: 1;
+    flex-wrap: wrap;
+}
+
+.controls-left,
+.controls-center,
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.control-btn {
+    background: rgba(74, 158, 255, 0.1);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    color: #4a9eff;
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.control-btn:hover {
+    background: rgba(74, 158, 255, 0.2);
+    border-color: #4a9eff;
+    transform: translateY(-1px);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+}
+
+.control-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.page-info,
+.zoom-info {
+    color: #ccc;
+    font-size: 0.9rem;
+    min-width: 80px;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Call-to-Action para transição Cover → Book */
+.cover-cta {
+    position: absolute;
+    bottom: 60px;
+    right: 50%;
+    transform: translateX(50%);
+    z-index: 10;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.cover-cta.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cta-content {
+    background: rgba(74, 158, 255, 0.15);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    border-radius: 12px;
+    padding: 0.8rem 1.2rem;
+    backdrop-filter: blur(10px);
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(74, 158, 255, 0.2);
+}
+
+.cta-text {
+    color: #4a9eff;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 0 0 0.4rem 0;
+    letter-spacing: 0.3px;
+}
+
+.cta-animation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.finger {
+    font-size: 1.1rem;
+    animation: tapAnimation 2s ease-in-out infinite;
+}
+
+@keyframes tapAnimation {
+    0%, 100% {
+        transform: translateX(0) scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: translateX(8px) scale(1.1);
+        opacity: 1;
+    }
+}
+
+/* Loading Screen */
+.loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 26, 26, 0.98);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid #333;
+    border-top: 3px solid #4a9eff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading p {
+    font-size: 1.1rem;
+    color: #ccc;
+    margin-bottom: 1rem;
+}
+
+.progress-bar {
+    width: 300px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a9eff, #357abd);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* Error Screen */
+.error {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 26, 26, 0.98);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+    backdrop-filter: blur(5px);
+}
+
+.error-content {
+    background: rgba(40, 40, 40, 0.95);
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 500px;
+    border: 1px solid #444;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.error-content h2 {
+    color: #ff6b6b;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.error-content p {
+    color: #ccc;
+    margin-bottom: 1.5rem;
+}
+
+.error-solution {
+    text-align: left;
+}
+
+.error-solution h3 {
+    color: #4a9eff;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.error-solution ol {
+    color: #aaa;
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+}
+
+.error-solution li {
+    margin-bottom: 0.5rem;
+}
+
+.error-solution code {
+    background: #222;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #4a9eff;
+    font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    margin: 0.25rem;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #4a9eff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #357abd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+.btn-secondary {
+    background: #555;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #666;
+    transform: translateY(-2px);
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+/* Page Styles - Mínimo necessário, PageFlip controla o layout */
+.page {
+    background: white;
+}
+
+.page img,
+.page canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Fullscreen Mode */
+.app.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 9999;
+    grid-template-rows: 0 1fr auto;
+}
+
+.app.fullscreen #topbar {
+    display: none;
+}
+
+/* Responsive Design - Mobile First */
+@media (max-width: 768px) {
+    :root {
+        --topbar-h: 52px;
+        --toolbar-h: 120px;
+    }
+
+    #topbar {
+        padding: 0.5rem 1rem;
+    }
+
+    #topbar h1 {
+        font-size: 1.1rem;
+    }
+
+    #toolbar {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .controls-left,
+    .controls-center,
+    .controls-right {
+        justify-content: center;
+    }
+
+    .cover-cta {
+        bottom: 40px;
+        right: 50%;
+        transform: translateX(50%);
+    }
+
+    .cta-content {
+        padding: 0.6rem 1rem;
+    }
+
+    .cta-text {
+        font-size: 0.8rem;
+    }
+
+    .page-info,
+    .zoom-info {
+        min-width: 70px;
+        font-size: 0.85rem;
+    }
+
+    .control-btn {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.9rem;
+        min-width: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --topbar-h: 48px;
+        --toolbar-h: 140px;
+    }
+
+    #toolbar {
+        padding: 0.4rem 0.8rem;
+    }
+
+    #stage {
+        padding: 4px;
+    }
+}
+
+/* Animation for smooth transitions */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#stage {
+    animation: fadeIn 0.5s ease-out;
+}

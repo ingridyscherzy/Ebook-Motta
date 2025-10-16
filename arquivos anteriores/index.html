@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📖 eBook Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- StPageFlip -->
+    <script src="https://unpkg.com/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- Header/Topbar -->
+        <header id="topbar">
+            <h1>📖 eBook Viewer</h1>
+        </header>
+
+        <!-- Loading Screen -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Carregando eBook...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <!-- Error Screen -->
+        <div id="error" class="error hidden">
+            <div class="error-content">
+                <h2>⚠️ Problema Detectado</h2>
+                <p id="errorMessage">Não foi possível carregar o eBook</p>
+                <div class="error-solution">
+                    <h3>💡 Como resolver:</h3>
+                    <ol>
+                        <li>Use um servidor HTTP local: <code>python3 -m http.server 8000</code></li>
+                        <li>Ou faça upload para GitHub Pages</li>
+                        <li>Ou selecione o arquivo PDF manualmente:</li>
+                    </ol>
+                    <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+                    <button id="selectFileBtn" class="btn btn-primary">📁 Selecionar PDF</button>
+                    <button id="retryBtn" class="btn btn-secondary">🔄 Tentar Novamente</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Stage - Área dedicada ao livro -->
+        <main id="stage">
+            <div id="flipbook"></div>
+            <!-- Call-to-action para iniciar o livro (Fase 1 → Fase 2) -->
+            <div id="coverCallToAction" class="cover-cta hidden" aria-label="Toque para começar a leitura">
+                <div class="cta-content">
+                    <p class="cta-text">📖 Toque para começar</p>
+                    <div class="cta-animation">
+                        <span class="finger">👆</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Toolbar - Controles separados da área do livro -->
+        <footer id="toolbar">
+            <div class="controls-left">
+                <button id="prevBtn" class="control-btn" title="Página Anterior">
+                    <span>◀</span>
+                </button>
+                <span id="pageInfo" class="page-info">Página 1 de 1</span>
+                <button id="nextBtn" class="control-btn" title="Próxima Página">
+                    <span>▶</span>
+                </button>
+            </div>
+
+            <div class="controls-center">
+                <button id="zoomOutBtn" class="control-btn" title="Diminuir Zoom">
+                    <span>🔍−</span>
+                </button>
+                <span id="zoomInfo" class="zoom-info">100%</span>
+                <button id="zoomInBtn" class="control-btn" title="Aumentar Zoom">
+                    <span>🔍+</span>
+                </button>
+            </div>
+
+            <div class="controls-right">
+                <button id="downloadBtn" class="control-btn" title="Baixar PDF">
+                    <span>💾</span>
+                </button>
+                <button id="fullscreenBtn" class="control-btn" title="Tela Cheia">
+                    <span>⛶</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
