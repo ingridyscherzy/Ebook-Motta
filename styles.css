@@ -77,19 +77,34 @@ body {
     transition: transform 0.3s ease;
 }
 
-/* FASE 1: Cover Stage - apenas a capa, sem sombra/background de dupla */
+/* FASE 1: Cover Stage - apenas a capa centralizada */
 #flipbook.cover-stage {
     /* Tamanho natural do canvas da capa, sem width/height fixos */
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     border-radius: 8px;
 }
 
+/* FASE 1: Página da capa deve estar centralizada */
+#flipbook.cover-stage .page {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
 /* FASE 2: Book Stage - modo livro com PageFlip */
 #flipbook.book-stage {
-    /* PageFlip define o layout */
+    /* PageFlip define completamente o layout */
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     border-radius: 8px;
     overflow: hidden;
+}
+
+/* FASE 2: Páginas do livro - PageFlip controla tudo */
+#flipbook.book-stage .page {
+    /* Remover qualquer override de layout - PageFlip controla */
+    display: unset !important;
+    align-items: unset !important;
+    justify-content: unset !important;
 }
 
 
@@ -460,13 +475,10 @@ body {
     height: calc(min(100dvh, 100svh) - var(--toolbar-h));
 }
 
-/* Page Styles */
+/* Page Styles - Mínimo necessário, PageFlip controla o layout */
 .page {
     background: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    /* PageFlip controla display, position, etc. Não forçar layout! */
 }
 
 .page img,

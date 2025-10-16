@@ -291,8 +291,12 @@ class TwoPhaseEBookViewer {
             // Configurar controles
             this.setupBookStageControls();
 
-            // Posicionar na primeira dupla (páginas 2-3)
-            this.pageFlip.turnToPage(2);
+            // Posicionar na primeira dupla útil (páginas 2-3)
+            // Como showCover:false, a primeira dupla será automaticamente exibida
+            setTimeout(() => {
+                this.pageFlip.turnToPage(1); // Página 2 (índice 1)
+                setTimeout(() => this.diagnosePageVisibility(), 200);
+            }, 100);
 
             // Configurar CSS para book stage
             this.flipbook.className = 'book-stage';
@@ -372,7 +376,7 @@ class TwoPhaseEBookViewer {
             showCover: false,  // SEM CAPA - já foi exibida na Fase 1
             mobileScrollSupport: true,
             clickEventForward: true,
-            usePortrait: false,
+            usePortrait: true,
             startPage: 0,
             drawShadow: true,
             flippingTime: 600,
@@ -383,18 +387,23 @@ class TwoPhaseEBookViewer {
             maxShadowOpacity: 0.2
         });
 
-        // Criar elementos das páginas
-        const pageElements = this.pages.map((canvas, index) => {
+        // CRÍTICO: Criar elementos das páginas SEM anexar ao DOM
+        // O PageFlip vai gerenciar a exibição interna
+        const pageDivs = this.pages.map((canvas, index) => {
             return this.createPageElement(canvas, index);
         });
 
-        // Carregar páginas no flipbook
-        this.pageFlip.loadFromHTML(pageElements);
+        // Carregar páginas no PageFlip - ele vai controlar a exibição
+        this.pageFlip.loadFromHTML(pageDivs);
+
+        console.log(`📄 PÁGINAS CARREGADAS NO PAGEFLIP: ${pageDivs.length}`);
 
         // Event listeners do flipbook
         this.pageFlip.on('flip', () => {
             this.updatePageInfo();
             this.debounceRefit();
+            console.log(`📖 PÁGINA VIRADA - Atual: ${this.pageFlip.getCurrentPageIndex()}`);
+            setTimeout(() => this.diagnosePageVisibility(), 100);
         });
 
         this.pageFlip.on('changeState', () => {
@@ -407,10 +416,11 @@ class TwoPhaseEBookViewer {
 
         this.pageFlip.on('init', () => {
             this.debounceRefit();
+            this.diagnosePageVisibility();
         });
 
         this.updatePageInfo();
-        console.log('📚 PageFlip inicializado - modo spread sem capa');
+        console.log('📚 PageFlip inicializado - apenas páginas ativas visíveis');
     }
 
     createPageElement(canvas, pageIndex) {
@@ -753,6 +763,24 @@ class TwoPhaseEBookViewer {
 
     isLocalFile() {
         return window.location.protocol === 'file:';
+    }
+
+    // ===== DIAGNÓSTICO =====
+    diagnosePageVisibility() {
+        const visiblePages = this.flipbook.querySelectorAll('.page');
+        const visibleCanvases = this.flipbook.querySelectorAll('canvas');
+
+        console.log(`🔍 DIAGNÓSTICO DOM PAGEFLIP:`);
+        console.log(`   Páginas visíveis no DOM: ${visiblePages.length}`);
+        console.log(`   Canvas visíveis no DOM: ${visibleCanvases.length}`);
+        console.log(`   Páginas renderizadas total: ${this.pages.length}`);
+
+        // Verificar quais páginas estão realmente visíveis
+        visiblePages.forEach((page, index) => {
+            const rect = page.getBoundingClientRect();
+            const isVisible = rect.width > 0 && rect.height > 0;
+            console.log(`   Página ${index}: ${isVisible ? 'VISÍVEL' : 'OCULTA'} (${rect.width}x${rect.height})`);
+        });
     }
 
     // ===== CLEANUP =====
