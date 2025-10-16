@@ -229,7 +229,7 @@ class EBookViewer {
         const flipbookContainer = document.getElementById('flipbook');
         flipbookContainer.innerHTML = '';
 
-        // Configurar PageFlip - primeira página centralizada, resto duplas
+        // Configurar PageFlip - COM showCover para primeira página aparecer como capa
         this.pageFlip = new St.PageFlip(flipbookContainer, {
             width: this.pageWidth,
             height: this.pageHeight,
@@ -238,10 +238,10 @@ class EBookViewer {
             maxWidth: 2000,
             minHeight: 300,
             maxHeight: 2000,
-            showCover: true,  // PRIMEIRA PÁGINA COMO CAPA CENTRALIZADA
+            showCover: true,  // HABILITAR COVER MODE para primeira página
             mobileScrollSupport: true,
             clickEventForward: true,
-            usePortrait: false,  // Spread mode para o resto
+            usePortrait: false,  // Deixar PageFlip gerenciar orientação
             startPage: 0,
             drawShadow: true,
             flippingTime: 600,
@@ -283,12 +283,13 @@ class EBookViewer {
         });
 
         this.updatePageInfo();
-        console.log('📚 Flipbook inicializado com showCover: true');
+        console.log('📚 Flipbook inicializado com showCover: true - primeira página como capa única, demais como spread');
     }
 
     createPageElement(canvas, pageIndex) {
         const pageDiv = document.createElement('div');
         pageDiv.className = 'page';
+        pageDiv.setAttribute('data-page-index', pageIndex);
 
         // Criar um canvas exibido com o tamanho correto
         const displayCanvas = document.createElement('canvas');
@@ -304,6 +305,17 @@ class EBookViewer {
         ctx.drawImage(canvas, 0, 0);
 
         pageDiv.appendChild(displayCanvas);
+
+        // LOG para primeira página
+        if (pageIndex === 0) {
+            console.log(`📄 CRIANDO PRIMEIRA PÁGINA (índice ${pageIndex}):`, {
+                width: displayCanvas.width,
+                height: displayCanvas.height,
+                styleWidth: displayCanvas.style.width,
+                styleHeight: displayCanvas.style.height
+            });
+        }
+
         return pageDiv;
     }
 
@@ -320,13 +332,16 @@ class EBookViewer {
         const currentPageIndex = this.pageFlip.getCurrentPageIndex();
         const isCover = currentPageIndex === 0;
 
+        // Com showCover: true, PageFlip automaticamente trata a primeira página como capa única
+        // e as demais como spread duplo - não precisamos forçar estados manualmente
+
         // Calcular largura visível do livro baseado no estado atual
         let visibleBookWidth;
         if (isCover) {
-            // APENAS A CAPA: single page centralizada
+            // CAPA: single page centralizada (PageFlip gerencia automaticamente)
             visibleBookWidth = this.pageWidth;
         } else {
-            // TODAS AS OUTRAS PÁGINAS: sempre spread (duplas)
+            // PÁGINAS NORMAIS: spread duplo (PageFlip gerencia automaticamente)
             visibleBookWidth = this.pageWidth * 2;
         }
 
@@ -348,41 +363,12 @@ class EBookViewer {
         flipbook.style.transform = `scale(${this.currentZoom})`;
         flipbook.style.transformOrigin = 'center center';
 
-        // Forçar centramento CSS na capa e garantir visibilidade
-        if (isCover) {
-            flipbook.style.display = 'flex';
-            flipbook.style.justifyContent = 'center';
-            flipbook.style.alignItems = 'center';
+        // Com showCover: true, PageFlip automaticamente gerencia a exibição da capa
+        // Não precisamos forçar CSS - apenas garantir que o container está visível
+        flipbook.style.display = 'block';
+        flipbook.style.visibility = 'visible';
 
-            // Forçar visibilidade da primeira página
-            const firstPage = flipbook.querySelector('.page:first-child');
-            if (firstPage) {
-                firstPage.style.display = 'flex';
-                firstPage.style.justifyContent = 'center';
-                firstPage.style.alignItems = 'center';
-                firstPage.style.width = '100%';
-                firstPage.style.height = '100%';
-                firstPage.style.visibility = 'visible';
-                firstPage.style.opacity = '1';
-                console.log('🎯 PRIMEIRA PÁGINA FORÇADA A APARECER');
-            } else {
-                console.error('❌ PRIMEIRA PÁGINA NÃO ENCONTRADA NO DOM');
-            }
-        } else {
-            flipbook.style.display = '';
-            flipbook.style.justifyContent = '';
-            flipbook.style.alignItems = '';
-
-            // Restaurar estilo normal das páginas
-            const allPages = flipbook.querySelectorAll('.page');
-            allPages.forEach(page => {
-                page.style.display = '';
-                page.style.justifyContent = '';
-                page.style.alignItems = '';
-                page.style.width = '';
-                page.style.height = '';
-            });
-        }
+        console.log(`🎯 FLIPBOOK CONFIGURADO - Página ${currentPageIndex} (${isCover ? 'CAPA' : 'SPREAD'})`);
 
         // Atualizar interface
         this.updateZoomInfo();
@@ -660,6 +646,7 @@ class EBookViewer {
     isLocalFile() {
         return window.location.protocol === 'file:';
     }
+
 
     // Controle da mensagem de instrução
     showReadingHint() {
