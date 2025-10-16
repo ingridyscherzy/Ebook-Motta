@@ -18,6 +18,7 @@ class EBookViewer {
         this.readingHint = null;
         this.hintTimer = null;
         this.hasInteracted = false;
+        this.visualViewportSupported = false;
 
         this.initializeApp();
     }
@@ -29,6 +30,9 @@ class EBookViewer {
             // Configurar stage e mensagem
             this.stage = document.querySelector('.stage');
             this.readingHint = document.getElementById('readingHint');
+
+            // Verificar suporte ao visualViewport
+            this.visualViewportSupported = window.visualViewport !== undefined;
 
             // Verificar dependências
             this.checkDependencies();
@@ -225,7 +229,7 @@ class EBookViewer {
         const flipbookContainer = document.getElementById('flipbook');
         flipbookContainer.innerHTML = '';
 
-        // Configurar PageFlip com tamanhos fixos baseados nas páginas renderizadas
+        // Configurar PageFlip com showCover: true para capa isolada
         this.pageFlip = new St.PageFlip(flipbookContainer, {
             width: this.pageWidth,
             height: this.pageHeight,
@@ -234,7 +238,7 @@ class EBookViewer {
             maxWidth: 2000,
             minHeight: 300,
             maxHeight: 2000,
-            showCover: true,  // Mostrar primeira página como capa isolada
+            showCover: true,  // CAPA ISOLADA
             mobileScrollSupport: true,
             clickEventForward: true,
             usePortrait: true,
@@ -259,7 +263,7 @@ class EBookViewer {
         this.pageFlip.on('flip', () => {
             this.updatePageInfo();
             this.hideReadingHint();  // Esconder mensagem ao virar página
-            this.debounceRefit();    // Reajustar escala ao mudar de página (capa -> livro)
+            this.debounceRefit();    // Reajustar escala ao mudar de página (capa -> spread)
         });
 
         this.pageFlip.on('changeState', () => {
@@ -270,8 +274,12 @@ class EBookViewer {
             this.debounceRefit();
         });
 
+        this.pageFlip.on('init', () => {
+            this.debounceRefit();
+        });
+
         this.updatePageInfo();
-        console.log('📚 Flipbook inicializado');
+        console.log('📚 Flipbook inicializado com showCover: true');
     }
 
     createPageElement(canvas, pageIndex) {
@@ -295,51 +303,50 @@ class EBookViewer {
         return pageDiv;
     }
 
-    // Função principal de fit responsivo - fit-to-viewport real
+    // FIT TO VIEWPORT REAL - baseado em medidas reais da stage
     fitToViewport() {
         if (!this.pageFlip || !this.stage) return;
 
-        // Verificar orientação real do dispositivo
-        const isPortraitOrientation = window.matchMedia("(orientation: portrait)").matches;
-        const isPortraitMode = this.pageFlip.getSettings().usePortrait && isPortraitOrientation;
+        // Obter dimensões REAIS da stage via getBoundingClientRect
+        const stageRect = this.stage.getBoundingClientRect();
+        const availW = stageRect.width - 16;  // 8px padding de cada lado
+        const availH = stageRect.height - 16; // 8px padding de cada lado
 
-        // Calcular dimensões visíveis do livro baseado no modo atual
-        let visibleBookWidth, visibleBookHeight;
+        // Detectar se estamos na capa ou em páginas normais
+        const currentPageIndex = this.pageFlip.getCurrentPageIndex();
+        const isCover = currentPageIndex === 0;
 
-        if (isPortraitMode) {
-            // Modo portrait: uma página por vez
+        // Calcular largura visível do livro baseado no estado atual
+        let visibleBookWidth;
+        if (isCover) {
+            // Na capa: sempre single page
             visibleBookWidth = this.pageWidth;
-            visibleBookHeight = this.pageHeight;
         } else {
-            // Modo landscape: duas páginas lado a lado (exceto na capa)
-            const currentPageIndex = this.pageFlip.getCurrentPageIndex();
-            const isOnCover = currentPageIndex === 0;
+            // Páginas normais: verificar orientação
+            const isPortraitOrientation = window.matchMedia("(orientation: portrait)").matches;
+            const isPortraitMode = this.pageFlip.getSettings().usePortrait && isPortraitOrientation;
 
-            if (isOnCover) {
-                // Na capa, sempre uma página
+            if (isPortraitMode) {
+                // Mobile portrait: uma página por vez
                 visibleBookWidth = this.pageWidth;
-                visibleBookHeight = this.pageHeight;
             } else {
-                // Páginas normais, duas lado a lado
+                // Desktop/landscape: spread (duas páginas)
                 visibleBookWidth = this.pageWidth * 2;
-                visibleBookHeight = this.pageHeight;
             }
         }
 
-        // Dimensões disponíveis na stage (com margem segura)
-        const availW = this.stage.clientWidth - 32;  // 32px de margem total para segurança
-        const availH = this.stage.clientHeight - 32; // 32px de margem total para segurança
+        const visibleBookHeight = this.pageHeight;
 
-        // Calcular scale ideal para caber 100% na tela
+        // Calcular scale ideal para caber 100% na stage
         const scaleW = availW / visibleBookWidth;
         const scaleH = availH / visibleBookHeight;
         const idealScale = Math.min(scaleW, scaleH);
 
-        // Reduzir o zoom base em 15% conforme solicitado
-        const finalScale = idealScale * 0.85;
+        // Reduzir ~10% para garantir folga
+        const baseScale = idealScale * 0.9;
 
-        // Aplicar escala calculada (sem limitar por zoom manual)
-        this.currentZoom = this.clamp(finalScale, this.minZoom, this.maxZoom);
+        // Aplicar escala final
+        this.currentZoom = this.clamp(baseScale, this.minZoom, this.maxZoom);
 
         // Aplicar transform
         const flipbook = document.getElementById('flipbook');
@@ -349,7 +356,13 @@ class EBookViewer {
         // Atualizar interface
         this.updateZoomInfo();
 
-        console.log(`📐 Fit aplicado: scale=${this.currentZoom.toFixed(2)}, portrait=${isPortraitMode}, size=${visibleBookWidth}x${visibleBookHeight}, available=${availW}x${availH}`);
+        // LOGS DE DIAGNÓSTICO
+        console.log(`📐 FIT TO VIEWPORT:`);
+        console.log(`   stageRect: ${stageRect.width}x${stageRect.height}`);
+        console.log(`   pageWidth: ${this.pageWidth}, pageHeight: ${this.pageHeight}`);
+        console.log(`   visibleBookWidth: ${visibleBookWidth}`);
+        console.log(`   currentPageIndex: ${currentPageIndex}, isCover: ${isCover}`);
+        console.log(`   baseScale: ${baseScale.toFixed(3)}, currentZoom: ${this.currentZoom.toFixed(3)}`);
     }
 
     // Utilitário para clamp
@@ -382,6 +395,14 @@ class EBookViewer {
             this.debounceRefit();
         });
 
+        // Visual Viewport API para iOS/Android
+        if (this.visualViewportSupported) {
+            window.visualViewport.addEventListener('resize', () => {
+                this.debounceRefit();
+            });
+            console.log('✅ Visual Viewport API configurado');
+        }
+
         // Orientation change com matchMedia
         const orientationQuery = window.matchMedia("(orientation: portrait)");
         orientationQuery.addEventListener('change', () => {
@@ -396,6 +417,8 @@ class EBookViewer {
                 this.debounceRefit();
             }, 300);
         });
+
+        console.log('✅ Listeners de redimensionamento configurados');
     }
 
     setupEventListeners() {
@@ -461,10 +484,12 @@ class EBookViewer {
             switch(e.key) {
                 case 'ArrowLeft':
                     e.preventDefault();
+                    this.hideReadingHint();
                     this.pageFlip.flipPrev();
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
+                    this.hideReadingHint();
                     this.pageFlip.flipNext();
                     break;
                 case '=':
@@ -611,10 +636,10 @@ class EBookViewer {
         // Mostrar mensagem
         this.readingHint.classList.remove('fade-out');
 
-        // Auto fade-out após 5 segundos
+        // Auto fade-out após 3 segundos
         this.hintTimer = setTimeout(() => {
             this.hideReadingHint();
-        }, 5000);
+        }, 3000);
 
         console.log('💬 Mensagem de instrução exibida');
     }
