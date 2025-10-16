@@ -25,9 +25,27 @@ let currentZoom = 1;
 const minZoom = 0.4, maxZoom = 2.0;
 let phase = 'cover'; // 'cover' | 'book'
 
-/* PDF.js worker local (deve existir ./pdf.worker.min.js na raiz) */
-if (window['pdfjsLib']) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.js';
+/* =================== LOADING GUARANTEE PDF.JS =================== */
+// Carrega script dinamicamente
+function loadScript(src){
+    return new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src=src; s.onload=resolve; s.onerror=reject;
+        document.head.appendChild(s);
+    });
+}
+
+// Garante que pdfjsLib existe (local -> CDN fallback)
+async function ensurePdfjsLoaded(){
+    if (window.pdfjsLib) return;
+    // Se o <script> local falhou, forçamos o CDN aqui
+    await loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+}
+
+// Define worker local e, se falhar, usa CDN
+function setWorkerSrcFallback(){
+    try { pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.js'; } catch {}
+    try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'; } catch {}
 }
 
 /* =================== HELPERS =================== */
@@ -189,8 +207,7 @@ const mq = window.matchMedia('(max-width: 768px)');
 const onMQ = ()=> debounceFit();
 if (mq.addEventListener) mq.addEventListener('change', onMQ); else mq.addListener(onMQ);
 
-/* =================== BOOT =================== */
-/* Tenta abrir o PDF direto; se falhar, tenta via fetch/ArrayBuffer (cobre casos de MIME/CDN) */
+/* =================== PDF LOAD HELPERS =================== */
 async function tryOpenPdf(url) {
     try { return await pdfjsLib.getDocument(url).promise; }
     catch (e1) {
@@ -201,13 +218,25 @@ async function tryOpenPdf(url) {
     }
 }
 
+/* =================== BOOT =================== */
 (async function init(){
     try{
         errorBanner.hidden = true;
+
+        // 1) Garante que pdfjsLib exista (local ou via CDN)
+        await ensurePdfjsLoaded();
+
+        // 2) Worker local -> fallback CDN
+        setWorkerSrcFallback();
+
+        // 3) Abre o PDF (URL direta → fetch/ArrayBuffer fallback)
         pdfDoc = await tryOpenPdf(PDF_URL);
-        await showCover();  // capa single, centralizada
+
+        // 4) Mostra capa single
+        await showCover();
     }catch(err){
         console.error(err);
         errorBanner.hidden = false;
+        alert('Falha ao carregar o PDF. Verifique se pdf.min.js/pdf.worker.min.js estão na raiz — ou use o fallback do CDN já incluído.');
     }
 })();
