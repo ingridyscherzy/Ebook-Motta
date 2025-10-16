@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>eBook Viewer</title>
-  <meta name="description" content="Viewer PDF com StPageFlip + PDF.js. Mobile: 1 página; Desktop: 2 páginas.">
+  <title>Ebook Viewer</title>
+  <meta name="description" content="Viewer PDF com StPageFlip + PDF.js. Mobile: 1 página; Desktop: 2 páginas; capa single.">
   <link rel="stylesheet" href="./styles.css" />
   <!-- CSS do PageFlip -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.css" />
@@ -12,16 +12,15 @@
 <body>
   <div class="app">
     <header id="topbar">
-      <h1>📖 eBook Viewer</h1>
+      <h1>📖 Ebook Viewer</h1>
       <div class="spacer"></div>
     </header>
 
-    <!-- Área central reservada pelo Grid (entre header e footer) -->
+    <!-- Área central (entre header e footer) -->
     <main id="stage">
-      <!-- Aqui o viewer é desenhado -->
       <div id="flipbook"></div>
-      <!-- Dica inicial só na capa -->
       <div id="coverHint" aria-live="polite">Toque ou clique para começar</div>
+      <div id="errorBanner" hidden>⚠️ Não foi possível carregar o PDF.</div>
     </main>
 
     <footer id="toolbar">
@@ -42,7 +41,7 @@
     </footer>
   </div>
 
-  <!-- PDF.js local (assumo que esses 2 arquivos já estão na raiz do repo) -->
+  <!-- PDF.js (deve estar na raiz do repositório) -->
   <script src="./pdf.min.js"></script>
   <!-- PageFlip -->
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>

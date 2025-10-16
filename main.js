@@ -1,12 +1,13 @@
-// ===== Config =====
+/* =================== CONFIG =================== */
 const PDF_URL = './ebook.pdf';
 const RENDER_SCALE_BASE = 1.5;
 const MAX_PAGES = 500;
 
-// ===== DOM =====
+/* =================== DOM =================== */
 const flipbookEl   = document.getElementById('flipbook');
 const stageEl      = document.getElementById('stage');
 const coverHintEl  = document.getElementById('coverHint');
+const errorBanner  = document.getElementById('errorBanner');
 
 const prevBtn      = document.getElementById('prev');
 const nextBtn      = document.getElementById('next');
@@ -16,7 +17,7 @@ const pageLabel    = document.getElementById('pageLabel');
 const zoomLabel    = document.getElementById('zoomLabel');
 const fullscreenBtn= document.getElementById('fullscreen');
 
-// ===== State =====
+/* =================== STATE =================== */
 let pdfDoc = null;
 let pageFlip = null;
 let pageWidth = 0, pageHeight = 0;
@@ -24,12 +25,12 @@ let currentZoom = 1;
 const minZoom = 0.4, maxZoom = 2.0;
 let phase = 'cover'; // 'cover' | 'book'
 
-// ===== PDF.js worker local =====
+/* PDF.js worker local (deve existir ./pdf.worker.min.js na raiz) */
 if (window['pdfjsLib']) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.js';
 }
 
-// ===== Helpers =====
+/* =================== HELPERS =================== */
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
 
@@ -64,7 +65,7 @@ function fitToViewport() {
 
     const scaleW = availW / visibleW;
     const scaleH = availH / visibleH;
-    const scale  = Math.min(scaleW, scaleH) * 0.92;  // ~8% de folga para não cortar
+    const scale  = Math.min(scaleW, scaleH) * 0.92;  // ~8% de folga
     currentZoom  = clamp(scale, minZoom, 1.0);
 
     flipbookEl.style.transform = `scale(${currentZoom})`;
@@ -75,7 +76,7 @@ function fitToViewport() {
 function debounce(fn, ms=120){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 const debounceFit = debounce(fitToViewport, 80);
 
-// ===== Fase 1: somente a CAPA, single, centralizada =====
+/* =================== FASE 1: CAPA SINGLE =================== */
 async function showCover(){
     phase = 'cover';
     flipbookEl.innerHTML = '';
@@ -90,13 +91,13 @@ async function showCover(){
     updatePageLabel();
 }
 
-// ===== Fase 2: PageFlip (mobile=single; desktop=dupla) =====
+/* =================== FASE 2: LIVRO (PageFlip) =================== */
 async function startBook(){
     if (phase !== 'cover') return;
     phase = 'book';
     coverHintEl.classList.add('hide');
 
-    // renderizar todas as páginas em divs DETACHED (não anexar no DOM manualmente)
+    // Renderizar todas as páginas em divs DETACHED (não anexar ao DOM manualmente)
     const total = Math.min(pdfDoc.numPages, MAX_PAGES);
     const pages = [];
     pageWidth = 0; pageHeight = 0;
@@ -128,7 +129,7 @@ async function startBook(){
                                autoSize: false
     });
 
-    // Muito importante: carregar através da API da lib (não anexar a DOM sozinho)
+    // MUITO IMPORTANTE: carregar via API (PageFlip controla a visibilidade)
     pageFlip.loadFromHTML(pages);
 
     pageFlip.on('init', ()=>{
@@ -154,7 +155,7 @@ function updatePageLabel(){
     pageLabel.textContent = `${idx} / ${total}`;
 }
 
-// ===== Controles =====
+/* =================== CONTROLES =================== */
 prevBtn.addEventListener('click', ()=>{ if (phase === 'book') pageFlip.flipPrev(); });
 nextBtn.addEventListener('click', ()=>{ if (phase === 'cover') startBook(); else pageFlip.flipNext(); });
 
@@ -172,32 +173,41 @@ document.addEventListener('keydown', (e)=>{
     if (e.key === 'ArrowRight') { if (phase==='cover') startBook(); else pageFlip.flipNext(); }
 });
 
-// Fullscreen (best-effort)
 fullscreenBtn?.addEventListener('click', ()=>{
     const el = document.documentElement;
     if (!document.fullscreenElement) el.requestFullscreen?.(); else document.exitFullscreen?.();
 });
 
-// Clique na capa inicia o livro
 flipbookEl.addEventListener('click', ()=>{ if (phase === 'cover') startBook(); });
 
-// Refit responsivo
+/* =================== RESIZE/HANDLERS =================== */
 window.addEventListener('resize', debounceFit);
 if (window.visualViewport) window.visualViewport.addEventListener('resize', debounceFit);
 new ResizeObserver(debounceFit).observe(stageEl);
 
-// Refit quando cruzar o breakpoint (mobile ↔ desktop)
 const mq = window.matchMedia('(max-width: 768px)');
 const onMQ = ()=> debounceFit();
 if (mq.addEventListener) mq.addEventListener('change', onMQ); else mq.addListener(onMQ);
 
-// ===== Boot =====
+/* =================== BOOT =================== */
+/* Tenta abrir o PDF direto; se falhar, tenta via fetch/ArrayBuffer (cobre casos de MIME/CDN) */
+async function tryOpenPdf(url) {
+    try { return await pdfjsLib.getDocument(url).promise; }
+    catch (e1) {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const buf = await res.arrayBuffer();
+        return await pdfjsLib.getDocument({ data: buf }).promise;
+    }
+}
+
 (async function init(){
     try{
-        pdfDoc = await pdfjsLib.getDocument(PDF_URL).promise;
-        await showCover();            // abre com a capa single, centralizada
+        errorBanner.hidden = true;
+        pdfDoc = await tryOpenPdf(PDF_URL);
+        await showCover();  // capa single, centralizada
     }catch(err){
         console.error(err);
-        alert('Falha ao carregar o PDF (ebook.pdf). Verifique o caminho e tente novamente.');
+        errorBanner.hidden = false;
     }
 })();
