@@ -294,12 +294,8 @@ class TwoPhaseEBookViewer {
             // Configurar controles
             this.setupBookStageControls();
 
-            // Posicionar na primeira página (página 1)
-            // Em single-page mode, cada página é exibida individualmente
-            setTimeout(() => {
-                this.pageFlip.turnToPage(0); // Página 1 (índice 0) - primeira página
-                setTimeout(() => this.diagnosePageVisibility(), 200);
-            }, 100);
+            // A página inicial será definida no evento 'init' do PageFlip
+            // para garantir que o componente esteja totalmente carregado
 
             // Configurar CSS para book stage
             this.flipbook.className = 'book-stage';
@@ -424,6 +420,11 @@ class TwoPhaseEBookViewer {
         this.pageFlip.on('init', () => {
             this.debounceRefit();
             this.diagnosePageVisibility();
+            // Garantir que inicia na primeira página
+            setTimeout(() => {
+                this.pageFlip.turnToPage(0);
+                console.log('📖 FORÇA PÁGINA 1 - Atual:', this.pageFlip.getCurrentPageIndex());
+            }, 150);
         });
 
         this.updatePageInfo();
