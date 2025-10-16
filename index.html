@@ -1,85 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>eBook Interativo</title>
-    <link rel="stylesheet" href="styles.css">
-
-    <!-- PDF.js CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-
-    <!-- StPageFlip CDN -->
-    <script src="https://unpkg.com/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>eBook Viewer</title>
+  <meta name="description" content="Viewer PDF com StPageFlip + PDF.js. Mobile: 1 página; Desktop: 2 páginas.">
+  <link rel="stylesheet" href="./styles.css" />
+  <!-- CSS do PageFlip -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/css/page-flip.css" />
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <h1>📖 eBook Interativo</h1>
-        </header>
+  <div class="app">
+    <header id="topbar">
+      <h1>📖 eBook Viewer</h1>
+      <div class="spacer"></div>
+    </header>
 
-        <!-- Loading Screen -->
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Carregando eBook...</p>
-        </div>
+    <!-- Área central reservada pelo Grid (entre header e footer) -->
+    <main id="stage">
+      <!-- Aqui o viewer é desenhado -->
+      <div id="flipbook"></div>
+      <!-- Dica inicial só na capa -->
+      <div id="coverHint" aria-live="polite">Toque ou clique para começar</div>
+    </main>
 
-        <!-- Error Message -->
-        <div id="error" class="error hidden">
-            <p>❌ Erro ao carregar o eBook</p>
-            <small>Verifique se o arquivo 'ebook.pdf' está na pasta correta.</small>
-        </div>
+    <footer id="toolbar">
+      <div class="controls">
+        <button id="prev" aria-label="Página anterior">◀</button>
+      </div>
+      <div class="status">
+        <span id="pageLabel">Página 1</span>
+        <span id="zoomLabel">100%</span>
+      </div>
+      <div class="controls">
+        <button id="zoomOut" aria-label="Diminuir zoom">−</button>
+        <button id="zoomIn" aria-label="Aumentar zoom">＋</button>
+        <button id="next" aria-label="Próxima página">▶</button>
+        <a id="download" href="./ebook.pdf" download title="Baixar PDF">💾</a>
+        <button id="fullscreen" title="Tela cheia">⛶</button>
+      </div>
+    </footer>
+  </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="flipbook-container">
-                <div id="flipbook"></div>
-            </div>
-        </main>
-
-        <!-- Controls -->
-        <div class="controls" id="controls">
-            <div class="controls-group">
-                <button id="prevBtn" class="control-btn" title="Página Anterior">
-                    <span>‹</span>
-                </button>
-
-                <span id="pageInfo" class="page-info">
-                    Página 1 de 1
-                </span>
-
-                <button id="nextBtn" class="control-btn" title="Próxima Página">
-                    <span>›</span>
-                </button>
-            </div>
-
-            <div class="controls-group">
-                <button id="zoomOutBtn" class="control-btn" title="Diminuir Zoom">
-                    <span>🔍-</span>
-                </button>
-
-                <span id="zoomInfo" class="zoom-info">
-                    100%
-                </span>
-
-                <button id="zoomInBtn" class="control-btn" title="Aumentar Zoom">
-                    <span>🔍+</span>
-                </button>
-            </div>
-
-            <div class="controls-group">
-                <button id="downloadBtn" class="control-btn" title="Baixar PDF">
-                    <span>📥</span>
-                </button>
-
-                <button id="fullscreenBtn" class="control-btn" title="Tela Cheia">
-                    <span>⛶</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script src="main.js"></script>
+  <!-- PDF.js local (assumo que esses 2 arquivos já estão na raiz do repo) -->
+  <script src="./pdf.min.js"></script>
+  <!-- PageFlip -->
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
+  <script src="./main.js"></script>
 </body>
 </html>
