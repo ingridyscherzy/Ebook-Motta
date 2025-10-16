@@ -215,6 +215,63 @@ body {
     transition: transform 0.3s ease;
 }
 
+/* Mensagem de Instrução */
+.reading-hint {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    z-index: 10;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.5s ease, right 0.3s ease;
+}
+
+.reading-hint.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.hint-content {
+    background: rgba(74, 158, 255, 0.15);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    backdrop-filter: blur(10px);
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(74, 158, 255, 0.2);
+}
+
+.hint-text {
+    color: #4a9eff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 0.3px;
+}
+
+.hint-animation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.finger {
+    font-size: 1.2rem;
+    animation: tapAnimation 2s ease-in-out infinite;
+}
+
+@keyframes tapAnimation {
+    0%, 100% {
+        transform: translateX(0) scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: translateX(8px) scale(1.1);
+        opacity: 1;
+    }
+}
+
 /* Controls */
 .controls {
     padding: 1rem 2rem;
@@ -307,6 +364,22 @@ body {
     .stage {
         height: calc(100vh - 140px); /* Ajustar para header + controles em mobile */
         padding: 4px;
+    }
+
+    .reading-hint {
+        position: absolute;
+        bottom: 20px;
+        right: 50%;
+        top: auto;
+        transform: translateX(50%);
+    }
+
+    .hint-content {
+        padding: 0.8rem 1.2rem;
+    }
+
+    .hint-text {
+        font-size: 0.85rem;
     }
 
     .error-content {

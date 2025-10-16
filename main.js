@@ -15,6 +15,9 @@ class EBookViewer {
         this.stage = null;
         this.resizeObserver = null;
         this.debounceTimer = null;
+        this.readingHint = null;
+        this.hintTimer = null;
+        this.hasInteracted = false;
 
         this.initializeApp();
     }
@@ -23,8 +26,9 @@ class EBookViewer {
         console.log('🚀 Inicializando eBook Viewer...');
 
         try {
-            // Configurar stage
+            // Configurar stage e mensagem
             this.stage = document.querySelector('.stage');
+            this.readingHint = document.getElementById('readingHint');
 
             // Verificar dependências
             this.checkDependencies();
@@ -137,6 +141,7 @@ class EBookViewer {
             // Aguardar renderização e aplicar fit
             setTimeout(() => {
                 this.fitToViewport();
+                this.showReadingHint();  // Mostrar mensagem de instrução
             }, 100);
 
             console.log('🎉 eBook carregado com sucesso!');
@@ -229,7 +234,7 @@ class EBookViewer {
             maxWidth: 2000,
             minHeight: 300,
             maxHeight: 2000,
-            showCover: false,
+            showCover: true,  // Mostrar primeira página como capa isolada
             mobileScrollSupport: true,
             clickEventForward: true,
             usePortrait: true,
@@ -253,6 +258,7 @@ class EBookViewer {
         // Event listeners do flipbook
         this.pageFlip.on('flip', () => {
             this.updatePageInfo();
+            this.hideReadingHint();  // Esconder mensagem ao virar página
         });
 
         this.pageFlip.on('changeState', () => {
@@ -306,10 +312,13 @@ class EBookViewer {
         // Calcular scale ideal
         const scaleW = availW / visibleBookWidth;
         const scaleH = availH / visibleBookHeight;
-        const scale = Math.min(scaleW, scaleH);
+        const idealScale = Math.min(scaleW, scaleH);
+
+        // Reduzir o zoom base em 12% para evitar cortes
+        const reducedScale = idealScale * 0.88;
 
         // Aplicar limites de zoom e manter zoom manual se maior
-        this.currentZoom = Math.max(scale, Math.min(this.currentZoom, 1.0));
+        this.currentZoom = Math.max(reducedScale, Math.min(this.currentZoom, 1.0));
         this.currentZoom = this.clamp(this.currentZoom, this.minZoom, this.maxZoom);
 
         // Aplicar transform
@@ -366,10 +375,12 @@ class EBookViewer {
 
         // Navegação
         document.getElementById('prevBtn').addEventListener('click', () => {
+            this.hideReadingHint();
             this.pageFlip.flipPrev();
         });
 
         document.getElementById('nextBtn').addEventListener('click', () => {
+            this.hideReadingHint();
             this.pageFlip.flipNext();
         });
 
@@ -565,6 +576,35 @@ class EBookViewer {
         return window.location.protocol === 'file:';
     }
 
+    // Controle da mensagem de instrução
+    showReadingHint() {
+        if (!this.readingHint || this.hasInteracted) return;
+
+        // Mostrar mensagem
+        this.readingHint.classList.remove('fade-out');
+
+        // Auto fade-out após 5 segundos
+        this.hintTimer = setTimeout(() => {
+            this.hideReadingHint();
+        }, 5000);
+
+        console.log('💬 Mensagem de instrução exibida');
+    }
+
+    hideReadingHint() {
+        if (!this.readingHint || this.hasInteracted) return;
+
+        this.hasInteracted = true;
+        this.readingHint.classList.add('fade-out');
+
+        if (this.hintTimer) {
+            clearTimeout(this.hintTimer);
+            this.hintTimer = null;
+        }
+
+        console.log('💬 Mensagem de instrução escondida');
+    }
+
     // Cleanup
     destroy() {
         if (this.resizeObserver) {
@@ -572,6 +612,9 @@ class EBookViewer {
         }
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer);
+        }
+        if (this.hintTimer) {
+            clearTimeout(this.hintTimer);
         }
     }
 }
