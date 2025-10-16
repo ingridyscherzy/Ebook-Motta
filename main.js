@@ -291,10 +291,10 @@ class TwoPhaseEBookViewer {
             // Configurar controles
             this.setupBookStageControls();
 
-            // Posicionar na primeira dupla útil (páginas 2-3)
-            // Como showCover:false, a primeira dupla será automaticamente exibida
+            // Posicionar na página 2 (primeira página após a capa)
+            // Em single-page mode, cada página é exibida individualmente
             setTimeout(() => {
-                this.pageFlip.turnToPage(1); // Página 2 (índice 1)
+                this.pageFlip.turnToPage(1); // Página 2 (índice 1) - uma por vez
                 setTimeout(() => this.diagnosePageVisibility(), 200);
             }, 100);
 
@@ -364,7 +364,7 @@ class TwoPhaseEBookViewer {
         // Limpar flipbook completamente
         this.flipbook.innerHTML = '';
 
-        // Configurar PageFlip SEM showCover (capa já foi exibida na Fase 1)
+        // Configurar PageFlip para SINGLE-PAGE MODE (uma página por vez)
         this.pageFlip = new St.PageFlip(this.flipbook, {
             width: this.pageWidth,
             height: this.pageHeight,
@@ -376,15 +376,16 @@ class TwoPhaseEBookViewer {
             showCover: false,  // SEM CAPA - já foi exibida na Fase 1
             mobileScrollSupport: true,
             clickEventForward: true,
-            usePortrait: true,
+            usePortrait: true,  // FORÇA SINGLE PAGE MODE
             startPage: 0,
             drawShadow: true,
             flippingTime: 600,
             useMouseEvents: true,
             swipeDistance: 30,
-            showPageCorners: true,
+            showPageCorners: false,  // Sem cantos de página em single mode
             disableFlipByClick: false,
-            maxShadowOpacity: 0.2
+            maxShadowOpacity: 0.2,
+            autoSize: false     // Não auto-detectar spread/single
         });
 
         // CRÍTICO: Criar elementos das páginas SEM anexar ao DOM
@@ -420,7 +421,7 @@ class TwoPhaseEBookViewer {
         });
 
         this.updatePageInfo();
-        console.log('📚 PageFlip inicializado - apenas páginas ativas visíveis');
+        console.log('📚 PageFlip inicializado - SINGLE PAGE MODE (uma página por vez)');
     }
 
     createPageElement(canvas, pageIndex) {
@@ -462,8 +463,8 @@ class TwoPhaseEBookViewer {
             visibleBookWidth = this.pageWidth;
             visibleBookHeight = this.pageHeight;
         } else if (this.currentPhase === 'book-stage') {
-            // FASE 2: Sempre spread duplo (sem capa)
-            visibleBookWidth = this.pageWidth * 2;
+            // FASE 2: SINGLE PAGE MODE - uma página por vez
+            visibleBookWidth = this.pageWidth;  // UMA página, não dupla
             visibleBookHeight = this.pageHeight;
         } else {
             return; // Loading ou outro estado
@@ -488,7 +489,8 @@ class TwoPhaseEBookViewer {
         this.updateZoomInfo();
 
         // LOGS DE DIAGNÓSTICO
-        console.log(`📐 FIT TO VIEWPORT - FASE ${this.currentPhase.toUpperCase()}`);
+        const modeType = this.currentPhase === 'cover-stage' ? 'CAPA_ÚNICA' : 'SINGLE_PAGE';
+        console.log(`📐 FIT TO VIEWPORT - FASE ${this.currentPhase.toUpperCase()} (${modeType})`);
         console.log(`   stageRect: ${stageRect.width.toFixed(1)}x${stageRect.height.toFixed(1)}`);
         console.log(`   availableSpace: ${availW.toFixed(1)}x${availH.toFixed(1)}`);
         console.log(`   visibleBookSize: ${visibleBookWidth}x${visibleBookHeight}`);
