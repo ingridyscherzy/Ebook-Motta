@@ -404,13 +404,18 @@ body {
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100dvh;
+    height: 100vh;
     z-index: 9999;
     grid-template-rows: 0 1fr auto;
 }
 
 .app.fullscreen #topbar {
     display: none;
+}
+
+.app.fullscreen #stage {
+    padding: 16px;
+    min-height: 0;
 }
 
 /* Responsive Design - Mobile First */

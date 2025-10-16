@@ -548,6 +548,19 @@ class TwoPhaseEBookViewer {
             }, 300);
         });
 
+        // Fullscreen change events
+        document.addEventListener('fullscreenchange', () => {
+            console.log('📺 FULLSCREEN CHANGE EVENT');
+            setTimeout(() => this.fitToViewport(), 100);
+            setTimeout(() => this.fitToViewport(), 300);
+        });
+
+        document.addEventListener('webkitfullscreenchange', () => {
+            console.log('📺 WEBKIT FULLSCREEN CHANGE EVENT');
+            setTimeout(() => this.fitToViewport(), 100);
+            setTimeout(() => this.fitToViewport(), 300);
+        });
+
         console.log('✅ Resize handlers configurados');
     }
 
@@ -709,16 +722,24 @@ class TwoPhaseEBookViewer {
         if (!document.fullscreenElement) {
             container.requestFullscreen().then(() => {
                 container.classList.add('fullscreen');
-                setTimeout(() => {
-                    this.fitToViewport();
-                }, 300);
+                console.log('📺 ENTRANDO EM FULLSCREEN');
+                // Múltiplos recálculos para garantir layout correto
+                setTimeout(() => this.fitToViewport(), 100);
+                setTimeout(() => this.fitToViewport(), 300);
+                setTimeout(() => this.fitToViewport(), 600);
+            }).catch(error => {
+                console.error('❌ Erro ao entrar em fullscreen:', error);
             });
         } else {
             document.exitFullscreen().then(() => {
                 container.classList.remove('fullscreen');
-                setTimeout(() => {
-                    this.fitToViewport();
-                }, 300);
+                console.log('📺 SAINDO DE FULLSCREEN');
+                // Múltiplos recálculos para garantir layout correto
+                setTimeout(() => this.fitToViewport(), 100);
+                setTimeout(() => this.fitToViewport(), 300);
+                setTimeout(() => this.fitToViewport(), 600);
+            }).catch(error => {
+                console.error('❌ Erro ao sair de fullscreen:', error);
             });
         }
     }
