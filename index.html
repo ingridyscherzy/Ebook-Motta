@@ -14,8 +14,8 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
-        <header class="header">
+        <!-- Header/Topbar -->
+        <header id="topbar" class="header">
             <h1>📖 eBook Viewer</h1>
         </header>
 
@@ -50,11 +50,11 @@
         <!-- Main Stage - Área dedicada ao livro -->
         <main class="stage">
             <div id="flipbook"></div>
-            <!-- Mensagem de instrução -->
-            <div id="readingHint" class="reading-hint" aria-label="Instruções para leitura do eBook">
-                <div class="hint-content">
-                    <p class="hint-text">📖 Toque ou arraste para folhear</p>
-                    <div class="hint-animation">
+            <!-- Call-to-action para iniciar o livro (Fase 1 → Fase 2) -->
+            <div id="coverCallToAction" class="cover-cta hidden" aria-label="Toque para começar a leitura">
+                <div class="cta-content">
+                    <p class="cta-text">📖 Toque para começar</p>
+                    <div class="cta-animation">
                         <span class="finger">👆</span>
                     </div>
                 </div>

@@ -7,7 +7,7 @@
 
 /* Variáveis CSS para medidas reais do viewport */
 :root {
-    --header-h: 56px;
+    --topbar-h: 56px;
     --toolbar-h: 96px;
 }
 
@@ -36,9 +36,9 @@ body {
     position: relative;
 }
 
-/* Header fixo */
-.header {
-    height: var(--header-h);
+/* Header/Topbar fixo */
+#topbar {
+    height: var(--topbar-h);
     padding: 0.75rem 1.5rem;
     background: rgba(20, 20, 20, 0.95);
     backdrop-filter: blur(10px);
@@ -49,7 +49,7 @@ body {
     flex-shrink: 0;
 }
 
-.header h1 {
+#topbar h1 {
     font-size: 1.3rem;
     font-weight: 300;
     color: #4a9eff;
@@ -57,9 +57,9 @@ body {
     line-height: 1.2;
 }
 
-/* Stage - Área dedicada exclusivamente ao livro */
+/* Stage - Área dedicada exclusivamente ao livro (2 fases) */
 .stage {
-    height: calc(min(100dvh, 100svh) - var(--header-h) - var(--toolbar-h));
+    height: calc(min(100dvh, 100svh) - var(--topbar-h) - var(--toolbar-h));
     width: 100vw;
     display: grid;
     place-items: center;
@@ -70,35 +70,47 @@ body {
     flex: 1;
 }
 
-/* Flipbook - Centrado pela grid */
+/* Flipbook - Container flexível para 2 fases */
 #flipbook {
     transform-origin: center center;
+    margin: auto;
+    transition: transform 0.3s ease;
+}
+
+/* FASE 1: Cover Stage - apenas a capa, sem sombra/background de dupla */
+#flipbook.cover-stage {
+    /* Tamanho natural do canvas da capa, sem width/height fixos */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+}
+
+/* FASE 2: Book Stage - modo livro com PageFlip */
+#flipbook.book-stage {
+    /* PageFlip define o layout */
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     border-radius: 8px;
     overflow: hidden;
-    transition: transform 0.3s ease;
-    margin: auto;
 }
 
 
-/* Mensagem de Instrução */
-.reading-hint {
+/* Call-to-Action para transição Cover → Book */
+.cover-cta {
     position: absolute;
-    top: 50%;
-    right: 20px;
-    transform: translateY(-50%);
+    bottom: 60px;
+    right: 50%;
+    transform: translateX(50%);
     z-index: 10;
     pointer-events: none;
     opacity: 1;
     transition: opacity 0.5s ease;
 }
 
-.reading-hint.fade-out {
+.cover-cta.hidden {
     opacity: 0;
     pointer-events: none;
 }
 
-.hint-content {
+.cta-content {
     background: rgba(74, 158, 255, 0.15);
     border: 1px solid rgba(74, 158, 255, 0.3);
     border-radius: 12px;
@@ -108,7 +120,7 @@ body {
     box-shadow: 0 8px 24px rgba(74, 158, 255, 0.2);
 }
 
-.hint-text {
+.cta-text {
     color: #4a9eff;
     font-size: 0.85rem;
     font-weight: 500;
@@ -116,7 +128,7 @@ body {
     letter-spacing: 0.3px;
 }
 
-.hint-animation {
+.cta-animation {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -364,15 +376,15 @@ body {
 /* Responsive Design - Mobile First */
 @media (max-width: 768px) {
     :root {
-        --header-h: 52px;
+        --topbar-h: 52px;
         --toolbar-h: 120px; /* Mais espaço para layout vertical */
     }
 
-    .header {
+    #topbar {
         padding: 0.5rem 1rem;
     }
 
-    .header h1 {
+    #topbar h1 {
         font-size: 1.1rem;
     }
 
@@ -388,18 +400,17 @@ body {
         justify-content: center;
     }
 
-    .reading-hint {
-        bottom: 20px;
+    .cover-cta {
+        bottom: 40px;
         right: 50%;
-        top: auto;
         transform: translateX(50%);
     }
 
-    .hint-content {
+    .cta-content {
         padding: 0.6rem 1rem;
     }
 
-    .hint-text {
+    .cta-text {
         font-size: 0.8rem;
     }
 
@@ -418,7 +429,7 @@ body {
 
 @media (max-width: 480px) {
     :root {
-        --header-h: 48px;
+        --topbar-h: 48px;
         --toolbar-h: 140px;
     }
 
@@ -441,7 +452,7 @@ body {
     z-index: 9999;
 }
 
-.app-container.fullscreen .header {
+.app-container.fullscreen #topbar {
     display: none;
 }
 

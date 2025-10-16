@@ -1,4 +1,4 @@
-class EBookViewer {
+class TwoPhaseEBookViewer {
     constructor() {
         this.pdf = null;
         this.pageFlip = null;
@@ -8,28 +8,35 @@ class EBookViewer {
         this.zoomStep = 0.1;
         this.renderScale = 2;
         this.pages = [];
-        this.isLoading = false;
-        this.pdfUrl = './ebook.pdf';
         this.pageWidth = 400;
         this.pageHeight = 600;
+        this.pdfUrl = './ebook.pdf';
+
+        // Elementos DOM
         this.stage = null;
+        this.flipbook = null;
+        this.coverCTA = null;
+
+        // Estados
+        this.currentPhase = 'loading'; // 'loading' | 'cover-stage' | 'book-stage'
+        this.bookStageStarted = false;
+
+        // Observadores
         this.resizeObserver = null;
         this.debounceTimer = null;
-        this.readingHint = null;
-        this.hintTimer = null;
-        this.hasInteracted = false;
         this.visualViewportSupported = false;
 
         this.initializeApp();
     }
 
     async initializeApp() {
-        console.log('🚀 Inicializando eBook Viewer...');
+        console.log('🚀 INICIALIZANDO EBOOK VIEWER - 2 FASES');
 
         try {
-            // Configurar stage e mensagem
+            // Configurar elementos DOM
             this.stage = document.querySelector('.stage');
-            this.readingHint = document.getElementById('readingHint');
+            this.flipbook = document.getElementById('flipbook');
+            this.coverCTA = document.getElementById('coverCallToAction');
 
             // Verificar suporte ao visualViewport
             this.visualViewportSupported = window.visualViewport !== undefined;
@@ -40,8 +47,8 @@ class EBookViewer {
             // Configurar PDF.js
             this.setupPDFJS();
 
-            // Tentar carregar PDF automaticamente
-            await this.loadPDF();
+            // Carregar PDF e iniciar FASE 1
+            await this.loadPDFAndStartCoverStage();
 
         } catch (error) {
             console.error('❌ Erro na inicialização:', error);
@@ -67,17 +74,17 @@ class EBookViewer {
         console.log('✅ PDF.js configurado');
     }
 
-    async loadPDF() {
+    async loadPDFAndStartCoverStage() {
         this.showLoading();
-        console.log('📖 Tentando carregar PDF...');
+        console.log('📖 FASE 1: Carregando PDF para cover stage...');
 
         try {
-            // Método 1: Tentar input do usuário primeiro (para compatibilidade local)
+            // Verificar se é arquivo local
             if (this.isLocalFile()) {
                 throw new Error('CORS_LOCAL');
             }
 
-            // Método 2: Tentar carregamento direto (funciona com servidor HTTP)
+            // Carregar PDF
             const loadingTask = pdfjsLib.getDocument({
                 url: this.pdfUrl,
                 verbosity: 0
@@ -94,7 +101,8 @@ class EBookViewer {
             this.pdf = await loadingTask.promise;
             console.log(`✅ PDF carregado: ${this.pdf.numPages} páginas`);
 
-            await this.processPDF();
+            // Iniciar FASE 1: Cover Stage
+            await this.startCoverStage();
 
         } catch (error) {
             console.warn('⚠️ Carregamento automático falhou:', error.message);
@@ -126,7 +134,8 @@ class EBookViewer {
             this.pdf = await loadingTask.promise;
             console.log(`✅ Arquivo carregado: ${this.pdf.numPages} páginas`);
 
-            await this.processPDF();
+            // Iniciar FASE 1: Cover Stage
+            await this.startCoverStage();
 
         } catch (error) {
             console.error('❌ Erro ao carregar arquivo:', error);
@@ -134,57 +143,46 @@ class EBookViewer {
         }
     }
 
-    async processPDF() {
+    // ===== FASE 1: COVER STAGE =====
+    async startCoverStage() {
+        console.log('📖 INICIANDO FASE 1: COVER STAGE');
+        this.currentPhase = 'cover-stage';
+
         try {
-            await this.renderAllPages();
-            this.initializeFlipbook();
-            this.setupEventListeners();
+            // Renderizar APENAS a página 1 (capa)
+            const page1 = await this.pdf.getPage(1);
+            const coverCanvas = await this.renderPageToCanvas(page1);
+
+            // Definir dimensões base a partir da capa
+            this.pageWidth = coverCanvas.width / this.renderScale;
+            this.pageHeight = coverCanvas.height / this.renderScale;
+
+            // Criar DOM da capa: 1 div.page com 1 canvas
+            this.createCoverDOM(coverCanvas);
+
+            // Configurar CSS para fase de capa
+            this.flipbook.className = 'cover-stage';
+
+            // Configurar listeners para transição para Fase 2
+            this.setupCoverStageListeners();
+
+            // Configurar resize handling
             this.setupResizeHandling();
+
+            // Fit inicial
+            this.fitToViewport();
+
+            // Mostrar call-to-action
+            this.showCoverCTA();
+
             this.hideLoading();
 
-            // Aguardar renderização e aplicar fit
-            setTimeout(() => {
-                this.fitToViewport();
-                this.showReadingHint();  // Mostrar mensagem de instrução
-            }, 100);
-
-            console.log('🎉 eBook carregado com sucesso!');
+            console.log(`✅ FASE 1 COMPLETA: Capa (${this.pageWidth}x${this.pageHeight}) exibida`);
 
         } catch (error) {
-            console.error('❌ Erro ao processar PDF:', error);
-            this.showError(`Erro ao processar PDF: ${error.message}`);
+            console.error('❌ Erro na FASE 1:', error);
+            this.showError(`Erro ao exibir capa: ${error.message}`);
         }
-    }
-
-    async renderAllPages() {
-        const numPages = this.pdf.numPages;
-        this.pages = [];
-
-        console.log(`🎨 Renderizando ${numPages} páginas...`);
-
-        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-            try {
-                const page = await this.pdf.getPage(pageNum);
-                const canvas = await this.renderPageToCanvas(page);
-                this.pages.push(canvas);
-
-                // Definir dimensões da primeira página
-                if (pageNum === 1) {
-                    this.pageWidth = canvas.width / this.renderScale;
-                    this.pageHeight = canvas.height / this.renderScale;
-                }
-
-                // Atualizar progresso
-                const progress = Math.round((pageNum / numPages) * 100);
-                this.updateProgress(progress);
-
-            } catch (error) {
-                console.error(`❌ Erro na página ${pageNum}:`, error);
-                this.pages.push(this.createErrorPage(pageNum));
-            }
-        }
-
-        console.log(`✅ ${this.pages.length} páginas renderizadas`);
     }
 
     async renderPageToCanvas(page) {
@@ -202,6 +200,139 @@ class EBookViewer {
 
         await page.render(renderContext).promise;
         return canvas;
+    }
+
+    createCoverDOM(coverCanvas) {
+        // Limpar flipbook
+        this.flipbook.innerHTML = '';
+
+        // Criar div.page única
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page';
+        pageDiv.setAttribute('data-page-index', '0');
+
+        // Criar canvas exibido com tamanho correto
+        const displayCanvas = document.createElement('canvas');
+        displayCanvas.width = coverCanvas.width;
+        displayCanvas.height = coverCanvas.height;
+        displayCanvas.style.width = `${this.pageWidth}px`;
+        displayCanvas.style.height = `${this.pageHeight}px`;
+        displayCanvas.style.maxWidth = '100%';
+        displayCanvas.style.maxHeight = '100%';
+        displayCanvas.style.objectFit = 'contain';
+
+        const ctx = displayCanvas.getContext('2d');
+        ctx.drawImage(coverCanvas, 0, 0);
+
+        pageDiv.appendChild(displayCanvas);
+        this.flipbook.appendChild(pageDiv);
+
+        console.log(`📄 CAPA DOM CRIADA: 1 div.page + 1 canvas (${coverCanvas.width}x${coverCanvas.height})`);
+    }
+
+    setupCoverStageListeners() {
+        // Eventos para iniciar Fase 2
+        const startBookStage = () => {
+            if (!this.bookStageStarted) {
+                this.bookStageStarted = true;
+                this.startBookStage();
+            }
+        };
+
+        // Click/Touch em qualquer lugar do flipbook
+        this.flipbook.addEventListener('click', startBookStage);
+        this.flipbook.addEventListener('touchstart', startBookStage);
+
+        // Teclas
+        document.addEventListener('keydown', (e) => {
+            if (this.currentPhase === 'cover-stage') {
+                if (['ArrowRight', 'ArrowLeft', ' ', 'Enter'].includes(e.key)) {
+                    e.preventDefault();
+                    startBookStage();
+                }
+            }
+        });
+
+        console.log('✅ Listeners da FASE 1 configurados');
+    }
+
+    showCoverCTA() {
+        if (this.coverCTA) {
+            this.coverCTA.classList.remove('hidden');
+            console.log('💬 Call-to-action exibido');
+        }
+    }
+
+    hideCoverCTA() {
+        if (this.coverCTA) {
+            this.coverCTA.classList.add('hidden');
+            console.log('💬 Call-to-action escondido');
+        }
+    }
+
+    // ===== FASE 2: BOOK STAGE =====
+    async startBookStage() {
+        console.log('📚 INICIANDO FASE 2: BOOK STAGE');
+        this.currentPhase = 'book-stage';
+
+        try {
+            // Esconder CTA
+            this.hideCoverCTA();
+
+            // Mostrar loading breve
+            this.showLoading();
+
+            // Renderizar TODAS as páginas do PDF
+            await this.renderAllPages();
+
+            // Limpar flipbook e inicializar PageFlip
+            this.initializePageFlip();
+
+            // Configurar controles
+            this.setupBookStageControls();
+
+            // Posicionar na primeira dupla (páginas 2-3)
+            this.pageFlip.turnToPage(2);
+
+            // Configurar CSS para book stage
+            this.flipbook.className = 'book-stage';
+
+            // Fit inicial
+            this.fitToViewport();
+
+            this.hideLoading();
+
+            console.log('✅ FASE 2 COMPLETA: Modo livro inicializado');
+
+        } catch (error) {
+            console.error('❌ Erro na FASE 2:', error);
+            this.showError(`Erro ao inicializar livro: ${error.message}`);
+        }
+    }
+
+    async renderAllPages() {
+        const numPages = this.pdf.numPages;
+        this.pages = [];
+
+        console.log(`🎨 Renderizando ${numPages} páginas para book stage...`);
+
+        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+            try {
+                const page = await this.pdf.getPage(pageNum);
+                const canvas = await this.renderPageToCanvas(page);
+                this.pages.push(canvas);
+
+                // Atualizar progresso
+                const progress = Math.round((pageNum / numPages) * 100);
+                this.updateProgress(progress);
+
+            } catch (error) {
+                console.error(`❌ Erro na página ${pageNum}:`, error);
+                this.pages.push(this.createErrorPage(pageNum));
+            }
+        }
+
+        console.log(`✅ ${this.pages.length} páginas renderizadas para book stage`);
     }
 
     createErrorPage(pageNum) {
@@ -225,12 +356,12 @@ class EBookViewer {
         return canvas;
     }
 
-    initializeFlipbook() {
-        const flipbookContainer = document.getElementById('flipbook');
-        flipbookContainer.innerHTML = '';
+    initializePageFlip() {
+        // Limpar flipbook completamente
+        this.flipbook.innerHTML = '';
 
-        // Configurar PageFlip - COM showCover para primeira página aparecer como capa
-        this.pageFlip = new St.PageFlip(flipbookContainer, {
+        // Configurar PageFlip SEM showCover (capa já foi exibida na Fase 1)
+        this.pageFlip = new St.PageFlip(this.flipbook, {
             width: this.pageWidth,
             height: this.pageHeight,
             size: 'fixed',
@@ -238,17 +369,18 @@ class EBookViewer {
             maxWidth: 2000,
             minHeight: 300,
             maxHeight: 2000,
-            showCover: true,  // HABILITAR COVER MODE para primeira página
+            showCover: false,  // SEM CAPA - já foi exibida na Fase 1
             mobileScrollSupport: true,
             clickEventForward: true,
-            usePortrait: false,  // Deixar PageFlip gerenciar orientação
+            usePortrait: false,
             startPage: 0,
             drawShadow: true,
             flippingTime: 600,
             useMouseEvents: true,
             swipeDistance: 30,
             showPageCorners: true,
-            disableFlipByClick: false
+            disableFlipByClick: false,
+            maxShadowOpacity: 0.2
         });
 
         // Criar elementos das páginas
@@ -259,15 +391,10 @@ class EBookViewer {
         // Carregar páginas no flipbook
         this.pageFlip.loadFromHTML(pageElements);
 
-        // LOG: Verificar se as páginas foram carregadas
-        console.log(`📚 Páginas carregadas no flipbook: ${pageElements.length}`);
-        console.log(`📄 Primeira página HTML:`, pageElements[0] ? 'OK' : 'ERRO - AUSENTE');
-
         // Event listeners do flipbook
         this.pageFlip.on('flip', () => {
             this.updatePageInfo();
-            this.hideReadingHint();  // Esconder mensagem ao virar página
-            this.debounceRefit();    // Reajustar escala ao mudar de página (capa -> spread)
+            this.debounceRefit();
         });
 
         this.pageFlip.on('changeState', () => {
@@ -283,7 +410,7 @@ class EBookViewer {
         });
 
         this.updatePageInfo();
-        console.log('📚 Flipbook inicializado com showCover: true - primeira página como capa única, demais como spread');
+        console.log('📚 PageFlip inicializado - modo spread sem capa');
     }
 
     createPageElement(canvas, pageIndex) {
@@ -291,7 +418,7 @@ class EBookViewer {
         pageDiv.className = 'page';
         pageDiv.setAttribute('data-page-index', pageIndex);
 
-        // Criar um canvas exibido com o tamanho correto
+        // Criar canvas exibido
         const displayCanvas = document.createElement('canvas');
         displayCanvas.width = canvas.width;
         displayCanvas.height = canvas.height;
@@ -306,89 +433,63 @@ class EBookViewer {
 
         pageDiv.appendChild(displayCanvas);
 
-        // LOG para primeira página
-        if (pageIndex === 0) {
-            console.log(`📄 CRIANDO PRIMEIRA PÁGINA (índice ${pageIndex}):`, {
-                width: displayCanvas.width,
-                height: displayCanvas.height,
-                styleWidth: displayCanvas.style.width,
-                styleHeight: displayCanvas.style.height
-            });
-        }
-
         return pageDiv;
     }
 
-    // FIT TO VIEWPORT REAL - baseado em medidas reais da stage
+    // ===== FIT TO VIEWPORT =====
     fitToViewport() {
-        if (!this.pageFlip || !this.stage) return;
+        if (!this.stage || !this.flipbook) return;
 
-        // Obter dimensões REAIS da stage via getBoundingClientRect
+        // Obter dimensões REAIS da stage
         const stageRect = this.stage.getBoundingClientRect();
         const availW = stageRect.width - 16;  // 8px padding de cada lado
         const availH = stageRect.height - 16; // 8px padding de cada lado
 
-        // Detectar se estamos na capa ou em páginas normais
-        const currentPageIndex = this.pageFlip.getCurrentPageIndex();
-        const isCover = currentPageIndex === 0;
+        let visibleBookWidth, visibleBookHeight;
 
-        // Com showCover: true, PageFlip automaticamente trata a primeira página como capa única
-        // e as demais como spread duplo - não precisamos forçar estados manualmente
-
-        // Calcular largura visível do livro baseado no estado atual
-        let visibleBookWidth;
-        if (isCover) {
-            // CAPA: single page centralizada (PageFlip gerencia automaticamente)
+        if (this.currentPhase === 'cover-stage') {
+            // FASE 1: Apenas a capa
             visibleBookWidth = this.pageWidth;
-        } else {
-            // PÁGINAS NORMAIS: spread duplo (PageFlip gerencia automaticamente)
+            visibleBookHeight = this.pageHeight;
+        } else if (this.currentPhase === 'book-stage') {
+            // FASE 2: Sempre spread duplo (sem capa)
             visibleBookWidth = this.pageWidth * 2;
+            visibleBookHeight = this.pageHeight;
+        } else {
+            return; // Loading ou outro estado
         }
 
-        const visibleBookHeight = this.pageHeight;
-
-        // Calcular scale ideal para caber 100% na stage
+        // Calcular scale ideal
         const scaleW = availW / visibleBookWidth;
         const scaleH = availH / visibleBookHeight;
         const idealScale = Math.min(scaleW, scaleH);
 
-        // Reduzir ~10% para garantir folga
-        const baseScale = idealScale * 0.9;
+        // Aplicar folga de ~8%
+        const baseScale = idealScale * 0.92;
 
-        // Aplicar escala final
+        // Clamp
         this.currentZoom = this.clamp(baseScale, this.minZoom, this.maxZoom);
 
         // Aplicar transform
-        const flipbook = document.getElementById('flipbook');
-        flipbook.style.transform = `scale(${this.currentZoom})`;
-        flipbook.style.transformOrigin = 'center center';
-
-        // Com showCover: true, PageFlip automaticamente gerencia a exibição da capa
-        // Não precisamos forçar CSS - apenas garantir que o container está visível
-        flipbook.style.display = 'block';
-        flipbook.style.visibility = 'visible';
-
-        console.log(`🎯 FLIPBOOK CONFIGURADO - Página ${currentPageIndex} (${isCover ? 'CAPA' : 'SPREAD'})`);
+        this.flipbook.style.transform = `scale(${this.currentZoom})`;
+        this.flipbook.style.transformOrigin = 'center center';
 
         // Atualizar interface
         this.updateZoomInfo();
 
         // LOGS DE DIAGNÓSTICO
-        const pageType = isCover ? 'CAPA_ÚNICA' : 'SPREAD_DUPLA';
-        console.log(`📐 FIT TO VIEWPORT:`);
-        console.log(`   stageRect: ${stageRect.width}x${stageRect.height}`);
-        console.log(`   pageWidth: ${this.pageWidth}, pageHeight: ${this.pageHeight}`);
-        console.log(`   visibleBookWidth: ${visibleBookWidth}`);
-        console.log(`   currentPageIndex: ${currentPageIndex}, pageType: ${pageType}`);
-        console.log(`   baseScale: ${baseScale.toFixed(3)}, currentZoom: ${this.currentZoom.toFixed(3)}`);
+        console.log(`📐 FIT TO VIEWPORT - FASE ${this.currentPhase.toUpperCase()}`);
+        console.log(`   stageRect: ${stageRect.width.toFixed(1)}x${stageRect.height.toFixed(1)}`);
+        console.log(`   availableSpace: ${availW.toFixed(1)}x${availH.toFixed(1)}`);
+        console.log(`   visibleBookSize: ${visibleBookWidth}x${visibleBookHeight}`);
+        console.log(`   scaleW: ${scaleW.toFixed(3)}, scaleH: ${scaleH.toFixed(3)}`);
+        console.log(`   appliedScale: ${this.currentZoom.toFixed(3)}`);
     }
 
-    // Utilitário para clamp
     clamp(value, min, max) {
         return Math.min(Math.max(value, min), max);
     }
 
-    // Debounce para evitar múltiplas chamadas
     debounceRefit() {
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer);
@@ -398,17 +499,17 @@ class EBookViewer {
         }, 150);
     }
 
-    // Configurar observadores de redimensionamento
+    // ===== RESIZE HANDLING =====
     setupResizeHandling() {
         // ResizeObserver para a stage
         if (window.ResizeObserver) {
-            this.resizeObserver = new ResizeObserver(entries => {
+            this.resizeObserver = new ResizeObserver(() => {
                 this.debounceRefit();
             });
             this.resizeObserver.observe(this.stage);
         }
 
-        // Window resize backup
+        // Window resize
         window.addEventListener('resize', () => {
             this.debounceRefit();
         });
@@ -421,7 +522,7 @@ class EBookViewer {
             console.log('✅ Visual Viewport API configurado');
         }
 
-        // Orientation change com matchMedia
+        // Orientation change
         const orientationQuery = window.matchMedia("(orientation: portrait)");
         orientationQuery.addEventListener('change', () => {
             setTimeout(() => {
@@ -429,31 +530,29 @@ class EBookViewer {
             }, 300);
         });
 
-        // Fallback para orientationchange
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 this.debounceRefit();
             }, 300);
         });
 
-        console.log('✅ Listeners de redimensionamento configurados');
+        console.log('✅ Resize handlers configurados');
     }
 
-    setupEventListeners() {
-        console.log('🎮 Configurando controles...');
+    // ===== CONTROLES DO BOOK STAGE =====
+    setupBookStageControls() {
+        console.log('🎮 Configurando controles do book stage...');
 
         // Navegação
         document.getElementById('prevBtn').addEventListener('click', () => {
-            this.hideReadingHint();
-            this.pageFlip.flipPrev();
+            if (this.pageFlip) this.pageFlip.flipPrev();
         });
 
         document.getElementById('nextBtn').addEventListener('click', () => {
-            this.hideReadingHint();
-            this.pageFlip.flipNext();
+            if (this.pageFlip) this.pageFlip.flipNext();
         });
 
-        // Zoom relativo - mantém centramento
+        // Zoom
         document.getElementById('zoomInBtn').addEventListener('click', () => {
             this.zoomIn();
         });
@@ -495,19 +594,17 @@ class EBookViewer {
             });
         }
 
-        // Atalhos de teclado
+        // Atalhos de teclado (apenas no book stage)
         document.addEventListener('keydown', (e) => {
-            if (!this.pageFlip) return;
+            if (this.currentPhase !== 'book-stage' || !this.pageFlip) return;
 
             switch(e.key) {
                 case 'ArrowLeft':
                     e.preventDefault();
-                    this.hideReadingHint();
                     this.pageFlip.flipPrev();
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
-                    this.hideReadingHint();
                     this.pageFlip.flipNext();
                     break;
                 case '=':
@@ -536,10 +633,10 @@ class EBookViewer {
             }
         });
 
-        console.log('✅ Controles configurados');
+        console.log('✅ Controles do book stage configurados');
     }
 
-    // Métodos de controle de zoom - agora relativos
+    // ===== ZOOM CONTROLS =====
     zoomIn() {
         this.currentZoom = this.clamp(this.currentZoom + this.zoomStep, this.minZoom, this.maxZoom);
         this.applyZoom();
@@ -551,17 +648,22 @@ class EBookViewer {
     }
 
     applyZoom() {
-        const flipbook = document.getElementById('flipbook');
-        flipbook.style.transform = `scale(${this.currentZoom})`;
-        flipbook.style.transformOrigin = 'center center';
-
+        this.flipbook.style.transform = `scale(${this.currentZoom})`;
+        this.flipbook.style.transformOrigin = 'center center';
         this.updateZoomInfo();
     }
 
     updateZoomInfo() {
-        document.getElementById('zoomInfo').textContent = `${Math.round(this.currentZoom * 100)}%`;
-        document.getElementById('zoomInBtn').disabled = this.currentZoom >= this.maxZoom;
-        document.getElementById('zoomOutBtn').disabled = this.currentZoom <= this.minZoom;
+        const zoomInfoEl = document.getElementById('zoomInfo');
+        if (zoomInfoEl) {
+            zoomInfoEl.textContent = `${Math.round(this.currentZoom * 100)}%`;
+        }
+
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+
+        if (zoomInBtn) zoomInBtn.disabled = this.currentZoom >= this.maxZoom;
+        if (zoomOutBtn) zoomOutBtn.disabled = this.currentZoom <= this.minZoom;
     }
 
     updatePageInfo() {
@@ -570,10 +672,16 @@ class EBookViewer {
         const currentPage = this.pageFlip.getCurrentPageIndex() + 1;
         const totalPages = this.pages.length;
 
-        document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages}`;
+        const pageInfoEl = document.getElementById('pageInfo');
+        if (pageInfoEl) {
+            pageInfoEl.textContent = `Página ${currentPage} de ${totalPages}`;
+        }
 
-        document.getElementById('prevBtn').disabled = currentPage <= 1;
-        document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        if (prevBtn) prevBtn.disabled = currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
     }
 
     downloadPDF() {
@@ -603,7 +711,7 @@ class EBookViewer {
         }
     }
 
-    // Métodos de UI
+    // ===== UI METHODS =====
     showLoading() {
         document.getElementById('loading').classList.remove('hidden');
         document.getElementById('error').classList.add('hidden');
@@ -647,37 +755,7 @@ class EBookViewer {
         return window.location.protocol === 'file:';
     }
 
-
-    // Controle da mensagem de instrução
-    showReadingHint() {
-        if (!this.readingHint || this.hasInteracted) return;
-
-        // Mostrar mensagem
-        this.readingHint.classList.remove('fade-out');
-
-        // Auto fade-out após 3 segundos
-        this.hintTimer = setTimeout(() => {
-            this.hideReadingHint();
-        }, 3000);
-
-        console.log('💬 Mensagem de instrução exibida');
-    }
-
-    hideReadingHint() {
-        if (!this.readingHint || this.hasInteracted) return;
-
-        this.hasInteracted = true;
-        this.readingHint.classList.add('fade-out');
-
-        if (this.hintTimer) {
-            clearTimeout(this.hintTimer);
-            this.hintTimer = null;
-        }
-
-        console.log('💬 Mensagem de instrução escondida');
-    }
-
-    // Cleanup
+    // ===== CLEANUP =====
     destroy() {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
@@ -685,16 +763,13 @@ class EBookViewer {
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer);
         }
-        if (this.hintTimer) {
-            clearTimeout(this.hintTimer);
-        }
     }
 }
 
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🌟 Iniciando eBook Viewer...');
-    new EBookViewer();
+    console.log('🌟 INICIANDO TWO-PHASE EBOOK VIEWER...');
+    new TwoPhaseEBookViewer();
 });
 
 // Prevenir zoom do navegador
