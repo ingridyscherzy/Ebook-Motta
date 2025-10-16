@@ -80,6 +80,20 @@ body {
     margin: auto;
 }
 
+/* Capa centralizada - quando há apenas uma página */
+#flipbook .page:only-child {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Container do flipbook quando há apenas uma página visível */
+#flipbook:has(.page:only-child) {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 /* Mensagem de Instrução */
 .reading-hint {
     position: absolute;

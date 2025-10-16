@@ -229,7 +229,7 @@ class EBookViewer {
         const flipbookContainer = document.getElementById('flipbook');
         flipbookContainer.innerHTML = '';
 
-        // Configurar PageFlip com showCover: true para capa isolada
+        // Configurar PageFlip - capa única, resto duplas
         this.pageFlip = new St.PageFlip(flipbookContainer, {
             width: this.pageWidth,
             height: this.pageHeight,
@@ -238,10 +238,10 @@ class EBookViewer {
             maxWidth: 2000,
             minHeight: 300,
             maxHeight: 2000,
-            showCover: true,  // CAPA ISOLADA
+            showCover: true,  // CAPA ISOLADA (só índice 0)
             mobileScrollSupport: true,
             clickEventForward: true,
-            usePortrait: true,
+            usePortrait: false,  // FALSE: spread mode por padrão
             startPage: 0,
             drawShadow: true,
             flippingTime: 600,
@@ -315,41 +315,15 @@ class EBookViewer {
         // Detectar se estamos na capa ou em páginas normais
         const currentPageIndex = this.pageFlip.getCurrentPageIndex();
         const isCover = currentPageIndex === 0;
-        const isFirstPage = currentPageIndex === 1;
-
-        // Aplicar CSS personalizado para forçar centramento horizontal na primeira página
-        const flipbook = document.getElementById('flipbook');
-        if (isCover || isFirstPage) {
-            // Forçar centramento horizontal via CSS
-            flipbook.style.textAlign = 'center';
-            flipbook.style.display = 'flex';
-            flipbook.style.justifyContent = 'center';
-            flipbook.style.alignItems = 'center';
-        } else {
-            // Restaurar CSS normal
-            flipbook.style.textAlign = '';
-            flipbook.style.display = '';
-            flipbook.style.justifyContent = '';
-            flipbook.style.alignItems = '';
-        }
 
         // Calcular largura visível do livro baseado no estado atual
         let visibleBookWidth;
-        if (isCover || isFirstPage) {
-            // Na capa OU primeira página: sempre single page centralizada
+        if (isCover) {
+            // APENAS A CAPA: single page centralizada
             visibleBookWidth = this.pageWidth;
         } else {
-            // Páginas normais (a partir da segunda): verificar orientação
-            const isPortraitOrientation = window.matchMedia("(orientation: portrait)").matches;
-            const isPortraitMode = this.pageFlip.getSettings().usePortrait && isPortraitOrientation;
-
-            if (isPortraitMode) {
-                // Mobile portrait: uma página por vez
-                visibleBookWidth = this.pageWidth;
-            } else {
-                // Desktop/landscape: spread (duas páginas)
-                visibleBookWidth = this.pageWidth * 2;
-            }
+            // TODAS AS OUTRAS PÁGINAS: sempre spread (duplas)
+            visibleBookWidth = this.pageWidth * 2;
         }
 
         const visibleBookHeight = this.pageHeight;
@@ -366,20 +340,32 @@ class EBookViewer {
         this.currentZoom = this.clamp(baseScale, this.minZoom, this.maxZoom);
 
         // Aplicar transform
+        const flipbook = document.getElementById('flipbook');
         flipbook.style.transform = `scale(${this.currentZoom})`;
         flipbook.style.transformOrigin = 'center center';
+
+        // Forçar centramento CSS na capa
+        if (isCover) {
+            flipbook.style.display = 'flex';
+            flipbook.style.justifyContent = 'center';
+            flipbook.style.alignItems = 'center';
+        } else {
+            flipbook.style.display = '';
+            flipbook.style.justifyContent = '';
+            flipbook.style.alignItems = '';
+        }
 
         // Atualizar interface
         this.updateZoomInfo();
 
         // LOGS DE DIAGNÓSTICO
-        const forcedPortrait = isCover || isFirstPage;
+        const pageType = isCover ? 'CAPA_ÚNICA' : 'SPREAD_DUPLA';
         console.log(`📐 FIT TO VIEWPORT:`);
         console.log(`   stageRect: ${stageRect.width}x${stageRect.height}`);
         console.log(`   pageWidth: ${this.pageWidth}, pageHeight: ${this.pageHeight}`);
         console.log(`   visibleBookWidth: ${visibleBookWidth}`);
-        console.log(`   currentPageIndex: ${currentPageIndex}, isCover: ${isCover}, isFirstPage: ${isFirstPage}`);
-        console.log(`   forcedPortrait: ${forcedPortrait}, baseScale: ${baseScale.toFixed(3)}, currentZoom: ${this.currentZoom.toFixed(3)}`);
+        console.log(`   currentPageIndex: ${currentPageIndex}, pageType: ${pageType}`);
+        console.log(`   baseScale: ${baseScale.toFixed(3)}, currentZoom: ${this.currentZoom.toFixed(3)}`);
     }
 
     // Utilitário para clamp
