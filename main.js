@@ -318,11 +318,11 @@ class EBookViewer {
 
         // Calcular largura visível do livro baseado no estado atual
         let visibleBookWidth;
-        if (isCover) {
-            // Na capa: sempre single page
+        if (isCover || currentPageIndex === 1) {
+            // Na capa OU primeira página: sempre single page centralizada
             visibleBookWidth = this.pageWidth;
         } else {
-            // Páginas normais: verificar orientação
+            // Páginas normais (a partir da segunda): verificar orientação
             const isPortraitOrientation = window.matchMedia("(orientation: portrait)").matches;
             const isPortraitMode = this.pageFlip.getSettings().usePortrait && isPortraitOrientation;
 
@@ -357,11 +357,12 @@ class EBookViewer {
         this.updateZoomInfo();
 
         // LOGS DE DIAGNÓSTICO
+        const isFirstPage = currentPageIndex === 1;
         console.log(`📐 FIT TO VIEWPORT:`);
         console.log(`   stageRect: ${stageRect.width}x${stageRect.height}`);
         console.log(`   pageWidth: ${this.pageWidth}, pageHeight: ${this.pageHeight}`);
         console.log(`   visibleBookWidth: ${visibleBookWidth}`);
-        console.log(`   currentPageIndex: ${currentPageIndex}, isCover: ${isCover}`);
+        console.log(`   currentPageIndex: ${currentPageIndex}, isCover: ${isCover}, isFirstPage: ${isFirstPage}`);
         console.log(`   baseScale: ${baseScale.toFixed(3)}, currentZoom: ${this.currentZoom.toFixed(3)}`);
     }
 
