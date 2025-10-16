@@ -3,13 +3,18 @@ class EBookViewer {
         this.pdf = null;
         this.pageFlip = null;
         this.currentZoom = 1;
-        this.maxZoom = 3;
-        this.minZoom = 0.5;
-        this.zoomStep = 0.25;
+        this.maxZoom = 2.0;
+        this.minZoom = 0.4;
+        this.zoomStep = 0.1;
         this.renderScale = 2;
         this.pages = [];
         this.isLoading = false;
         this.pdfUrl = './ebook.pdf';
+        this.pageWidth = 400;
+        this.pageHeight = 600;
+        this.stage = null;
+        this.resizeObserver = null;
+        this.debounceTimer = null;
 
         this.initializeApp();
     }
@@ -18,6 +23,9 @@ class EBookViewer {
         console.log('🚀 Inicializando eBook Viewer...');
 
         try {
+            // Configurar stage
+            this.stage = document.querySelector('.stage');
+
             // Verificar dependências
             this.checkDependencies();
 
@@ -123,7 +131,14 @@ class EBookViewer {
             await this.renderAllPages();
             this.initializeFlipbook();
             this.setupEventListeners();
+            this.setupResizeHandling();
             this.hideLoading();
+
+            // Aguardar renderização e aplicar fit
+            setTimeout(() => {
+                this.fitToViewport();
+            }, 100);
+
             console.log('🎉 eBook carregado com sucesso!');
 
         } catch (error) {
@@ -143,6 +158,12 @@ class EBookViewer {
                 const page = await this.pdf.getPage(pageNum);
                 const canvas = await this.renderPageToCanvas(page);
                 this.pages.push(canvas);
+
+                // Definir dimensões da primeira página
+                if (pageNum === 1) {
+                    this.pageWidth = canvas.width / this.renderScale;
+                    this.pageHeight = canvas.height / this.renderScale;
+                }
 
                 // Atualizar progresso
                 const progress = Math.round((pageNum / numPages) * 100);
@@ -178,8 +199,8 @@ class EBookViewer {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        canvas.width = 400;
-        canvas.height = 600;
+        canvas.width = this.pageWidth * this.renderScale;
+        canvas.height = this.pageHeight * this.renderScale;
 
         // Fundo branco
         ctx.fillStyle = '#ffffff';
@@ -199,34 +220,19 @@ class EBookViewer {
         const flipbookContainer = document.getElementById('flipbook');
         flipbookContainer.innerHTML = '';
 
-        // Calcular dimensões
-        let pageWidth = 400;
-        let pageHeight = 600;
-
-        if (this.pages.length > 0) {
-            const firstCanvas = this.pages[0];
-            const aspectRatio = firstCanvas.height / firstCanvas.width;
-
-            const maxWidth = Math.min(window.innerWidth * 0.4, 500);
-            const maxHeight = Math.min(window.innerHeight * 0.7, 700);
-
-            pageWidth = Math.min(maxWidth, maxHeight / aspectRatio);
-            pageHeight = pageWidth * aspectRatio;
-        }
-
-        // Configurar PageFlip
+        // Configurar PageFlip com tamanhos fixos baseados nas páginas renderizadas
         this.pageFlip = new St.PageFlip(flipbookContainer, {
-            width: pageWidth,
-            height: pageHeight,
-            size: 'stretch',
-            minWidth: 300,
-            maxWidth: 1000,
-            minHeight: 400,
-            maxHeight: 1200,
-            showCover: true,
-            mobileScrollSupport: false,
+            width: this.pageWidth,
+            height: this.pageHeight,
+            size: 'fixed',
+            minWidth: 200,
+            maxWidth: 2000,
+            minHeight: 300,
+            maxHeight: 2000,
+            showCover: false,
+            mobileScrollSupport: true,
             clickEventForward: true,
-            usePortrait: false,
+            usePortrait: true,
             startPage: 0,
             drawShadow: true,
             flippingTime: 600,
@@ -249,8 +255,12 @@ class EBookViewer {
             this.updatePageInfo();
         });
 
+        this.pageFlip.on('changeState', () => {
+            this.debounceRefit();
+        });
+
         this.pageFlip.on('changeOrientation', () => {
-            this.updatePageInfo();
+            this.debounceRefit();
         });
 
         this.updatePageInfo();
@@ -261,27 +271,94 @@ class EBookViewer {
         const pageDiv = document.createElement('div');
         pageDiv.className = 'page';
 
-        // Aplicar zoom ao canvas
-        const scaledCanvas = this.scaleCanvas(canvas, this.currentZoom);
-        pageDiv.appendChild(scaledCanvas);
+        // Criar um canvas exibido com o tamanho correto
+        const displayCanvas = document.createElement('canvas');
+        displayCanvas.width = canvas.width;
+        displayCanvas.height = canvas.height;
+        displayCanvas.style.width = `${this.pageWidth}px`;
+        displayCanvas.style.height = `${this.pageHeight}px`;
+        displayCanvas.style.maxWidth = '100%';
+        displayCanvas.style.maxHeight = '100%';
+        displayCanvas.style.objectFit = 'contain';
 
+        const ctx = displayCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, 0);
+
+        pageDiv.appendChild(displayCanvas);
         return pageDiv;
     }
 
-    scaleCanvas(originalCanvas, scale) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+    // Função principal de fit responsivo
+    fitToViewport() {
+        if (!this.pageFlip || !this.stage) return;
 
-        canvas.width = originalCanvas.width;
-        canvas.height = originalCanvas.height;
-        canvas.style.width = `${originalCanvas.width * scale}px`;
-        canvas.style.height = `${originalCanvas.height * scale}px`;
-        canvas.style.maxWidth = '100%';
-        canvas.style.maxHeight = '100%';
-        canvas.style.objectFit = 'contain';
+        // Verificar se estamos em modo portrait baseado na orientação
+        const isPortrait = this.pageFlip.getSettings().usePortrait && window.innerWidth < window.innerHeight;
 
-        ctx.drawImage(originalCanvas, 0, 0);
-        return canvas;
+        // Calcular dimensões visíveis do livro
+        const visibleBookWidth = isPortrait ? this.pageWidth : this.pageWidth * 2;
+        const visibleBookHeight = this.pageHeight;
+
+        // Dimensões disponíveis na stage (com margem)
+        const availW = this.stage.clientWidth - 16;  // 16px de margem total
+        const availH = this.stage.clientHeight - 16; // 16px de margem total
+
+        // Calcular scale ideal
+        const scaleW = availW / visibleBookWidth;
+        const scaleH = availH / visibleBookHeight;
+        const scale = Math.min(scaleW, scaleH);
+
+        // Aplicar limites de zoom e manter zoom manual se maior
+        this.currentZoom = Math.max(scale, Math.min(this.currentZoom, 1.0));
+        this.currentZoom = this.clamp(this.currentZoom, this.minZoom, this.maxZoom);
+
+        // Aplicar transform
+        const flipbook = document.getElementById('flipbook');
+        flipbook.style.transform = `scale(${this.currentZoom})`;
+        flipbook.style.transformOrigin = 'center center';
+
+        // Atualizar interface
+        this.updateZoomInfo();
+
+        console.log(`📐 Fit aplicado: scale=${this.currentZoom.toFixed(2)}, isPortrait=${isPortrait}`);
+    }
+
+    // Utilitário para clamp
+    clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    // Debounce para evitar múltiplas chamadas
+    debounceRefit() {
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+        }
+        this.debounceTimer = setTimeout(() => {
+            this.fitToViewport();
+        }, 150);
+    }
+
+    // Configurar observadores de redimensionamento
+    setupResizeHandling() {
+        // ResizeObserver para a stage
+        if (window.ResizeObserver) {
+            this.resizeObserver = new ResizeObserver(entries => {
+                this.debounceRefit();
+            });
+            this.resizeObserver.observe(this.stage);
+        }
+
+        // Window resize backup
+        window.addEventListener('resize', () => {
+            this.debounceRefit();
+        });
+
+        // Orientation change
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.debounceRefit();
+            }, 300);
+        });
     }
 
     setupEventListeners() {
@@ -296,7 +373,7 @@ class EBookViewer {
             this.pageFlip.flipNext();
         });
 
-        // Zoom
+        // Zoom relativo - mantém centramento
         document.getElementById('zoomInBtn').addEventListener('click', () => {
             this.zoomIn();
         });
@@ -377,55 +454,32 @@ class EBookViewer {
             }
         });
 
-        // Redimensionamento
-        window.addEventListener('resize', () => {
-            if (this.pageFlip) {
-                setTimeout(() => {
-                    this.pageFlip.updateState();
-                }, 100);
-            }
-        });
-
         console.log('✅ Controles configurados');
     }
 
-    // Métodos de controle
+    // Métodos de controle de zoom - agora relativos
     zoomIn() {
-        if (this.currentZoom < this.maxZoom) {
-            this.currentZoom = Math.min(this.currentZoom + this.zoomStep, this.maxZoom);
-            this.updateZoom();
-        }
+        this.currentZoom = this.clamp(this.currentZoom + this.zoomStep, this.minZoom, this.maxZoom);
+        this.applyZoom();
     }
 
     zoomOut() {
-        if (this.currentZoom > this.minZoom) {
-            this.currentZoom = Math.max(this.currentZoom - this.zoomStep, this.minZoom);
-            this.updateZoom();
-        }
+        this.currentZoom = this.clamp(this.currentZoom - this.zoomStep, this.minZoom, this.maxZoom);
+        this.applyZoom();
     }
 
-    updateZoom() {
-        document.getElementById('zoomInfo').textContent = `${Math.round(this.currentZoom * 100)}%`;
+    applyZoom() {
+        const flipbook = document.getElementById('flipbook');
+        flipbook.style.transform = `scale(${this.currentZoom})`;
+        flipbook.style.transformOrigin = 'center center';
 
+        this.updateZoomInfo();
+    }
+
+    updateZoomInfo() {
+        document.getElementById('zoomInfo').textContent = `${Math.round(this.currentZoom * 100)}%`;
         document.getElementById('zoomInBtn').disabled = this.currentZoom >= this.maxZoom;
         document.getElementById('zoomOutBtn').disabled = this.currentZoom <= this.minZoom;
-
-        this.recreateFlipbook();
-    }
-
-    recreateFlipbook() {
-        if (!this.pageFlip) return;
-
-        const currentPageIndex = this.pageFlip.getCurrentPageIndex();
-        document.getElementById('flipbook').innerHTML = '';
-
-        this.initializeFlipbook();
-
-        setTimeout(() => {
-            if (this.pageFlip && currentPageIndex >= 0) {
-                this.pageFlip.flip(currentPageIndex);
-            }
-        }, 200);
     }
 
     updatePageInfo() {
@@ -454,14 +508,14 @@ class EBookViewer {
             container.requestFullscreen().then(() => {
                 container.classList.add('fullscreen');
                 setTimeout(() => {
-                    if (this.pageFlip) this.pageFlip.updateState();
+                    this.fitToViewport();
                 }, 300);
             });
         } else {
             document.exitFullscreen().then(() => {
                 container.classList.remove('fullscreen');
                 setTimeout(() => {
-                    if (this.pageFlip) this.pageFlip.updateState();
+                    this.fitToViewport();
                 }, 300);
             });
         }
@@ -509,6 +563,16 @@ class EBookViewer {
 
     isLocalFile() {
         return window.location.protocol === 'file:';
+    }
+
+    // Cleanup
+    destroy() {
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
+        if (this.debounceTimer) {
+            clearTimeout(this.debounceTimer);
+        }
     }
 }
 

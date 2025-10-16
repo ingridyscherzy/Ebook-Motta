@@ -11,7 +11,10 @@ body {
     color: #e0e0e0;
     height: 100vh;
     overflow: hidden;
+    overflow-x: hidden;
     line-height: 1.6;
+    margin: 0;
+    padding: 0;
 }
 
 /* App Container */
@@ -192,29 +195,24 @@ body {
     transform: translateY(-2px);
 }
 
-/* Main Content */
-.main-content {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
+/* Stage Container - Novo contêiner para centramento perfeito */
+.stage {
+    display: grid;
+    place-items: center;
+    width: 100vw;
+    height: calc(100vh - 64px);
     overflow: hidden;
-}
-
-.flipbook-container {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 8px;
+    box-sizing: border-box;
     position: relative;
 }
 
 #flipbook {
+    transform-origin: center center;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
     border-radius: 8px;
     overflow: hidden;
+    transition: transform 0.3s ease;
 }
 
 /* Controls */
@@ -306,8 +304,9 @@ body {
         justify-content: center;
     }
 
-    .main-content {
-        padding: 0.5rem;
+    .stage {
+        height: calc(100vh - 140px); /* Ajustar para header + controles em mobile */
+        padding: 4px;
     }
 
     .error-content {
@@ -324,6 +323,11 @@ body {
 @media (max-width: 480px) {
     .controls {
         flex-direction: column;
+    }
+
+    .stage {
+        height: calc(100vh - 160px); /* Mais espaço para controles em telas pequenas */
+        padding: 4px;
     }
 
     .page-info,
@@ -350,6 +354,10 @@ body {
 
 .app-container.fullscreen .header {
     display: none;
+}
+
+.app-container.fullscreen .stage {
+    height: 100vh; /* Fullscreen usa altura total */
 }
 
 /* Page Styles */
